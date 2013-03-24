@@ -1,0 +1,150 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{82F48588-6D20-4936-8301-63A20E5389D1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Mega</RootNamespace>
+    <AssemblyName>Mega</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="2a486f72.Useful, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\2a486f72.Useful.1.0.0\lib\portable-net45+win8+sl5+wp8\2a486f72.Useful.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.Formatting, Version=4.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.4.1.0-alpha-120809\lib\net40\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Resources\SolutionAssemblyInfo.cs">
+      <Link>Properties\SolutionAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="Algorithms.cs" />
+    <Compile Include="Api\AccessDeniedException.cs" />
+    <Compile Include="Api\AlreadyExistsException.cs" />
+    <Compile Include="Api\BanhammerHasFallenException.cs" />
+    <Compile Include="Api\CircularReferenceException.cs" />
+    <Compile Include="Api\CriticalUploadFailureException.cs" />
+    <Compile Include="Api\IncomingNotificationEventArgs.cs" />
+    <Compile Include="Api\IncompleteItemException.cs" />
+    <Compile Include="Api\InternalServerErrorException.cs" />
+    <Compile Include="Api\InvalidRequestException.cs" />
+    <Compile Include="Api\ItemNotFoundException.cs" />
+    <Compile Include="Api\ItemTemporarilyUnavailableException.cs" />
+    <Compile Include="Api\Messages\BeginUploadCommand.cs" />
+    <Compile Include="Api\Messages\BeginUploadResult.cs" />
+    <Compile Include="Api\Messages\AccountUpdatedNotification.cs" />
+    <Compile Include="Api\Messages\DeleteItemCommand.cs" />
+    <Compile Include="Api\Messages\KnownContactStatuses.cs" />
+    <Compile Include="Api\Messages\KnownAccountTypes.cs" />
+    <Compile Include="Api\Messages\MoveItemCommand.cs" />
+    <Compile Include="Api\Messages\SetContactStatusCommand.cs" />
+    <Compile Include="Api\Messages\SuccessResult.cs" />
+    <Compile Include="Api\Messages\SuccessResultConverter.cs" />
+    <Compile Include="Api\TooManyConcurrentClientsException.cs" />
+    <Compile Include="Api\UploadExpiredException.cs" />
+    <Compile Include="MegaException.cs" />
+    <Compile Include="Api\Messages\Account.cs" />
+    <Compile Include="Api\Messages\GetItemsResult.cs" />
+    <Compile Include="Api\Messages\GetDownloadCommand.cs" />
+    <Compile Include="Api\Messages\GetDownloadLinkResult.cs" />
+    <Compile Include="Api\Messages\IncomingNotificationWrapper.cs" />
+    <Compile Include="Api\Messages\Item.cs" />
+    <Compile Include="Api\Messages\ItemAddedNotification.cs" />
+    <Compile Include="Api\Messages\ItemDeletedNotification.cs" />
+    <Compile Include="Api\Messages\KnownItemTypes.cs" />
+    <Compile Include="Api\Messages\EncryptedItemKeySetConverter.cs" />
+    <Compile Include="Api\Messages\NewItemsCommand.cs" />
+    <Compile Include="Api\Messages\NewItemsResult.cs" />
+    <Compile Include="Api\Messages\SetItemAttributesCommand.cs" />
+    <Compile Include="Api\QuotaExceededException.cs" />
+    <Compile Include="Api\RateLimitHitException.cs" />
+    <Compile Include="Api\SessionExpiredException.cs" />
+    <Compile Include="Api\TemporaryServerErrorException.cs" />
+    <Compile Include="Api\TryAgainException.cs" />
+    <Compile Include="Base64JsonConverter.cs" />
+    <Compile Include="Api\Channel.cs" />
+    <Compile Include="Api\Messages\GetItemsCommand.cs" />
+    <Compile Include="Base64Data.cs" />
+    <Compile Include="Api\Messages\OpenUserSessionCommand.cs" />
+    <Compile Include="Api\Messages\GetUserProfileCommand.cs" />
+    <Compile Include="Api\Messages\OpenUserSessionResult.cs" />
+    <Compile Include="Api\Messages\GetUserProfileResult.cs" />
+    <Compile Include="DataIntegrityException.cs" />
+    <Compile Include="EncryptedItemKey.cs" />
+    <Compile Include="HttpClientExtensions.cs" />
+    <Compile Include="ItemAttributes.cs" />
+    <Compile Include="LogicException.cs" />
+    <Compile Include="OpaqueID.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Api\Transaction.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AsyncCoordinationPrimitives\AsyncCoordinationPrimitives.csproj">
+      <Project>{dde51973-eb4f-461a-961c-a0e28adb9d49}</Project>
+      <Name>AsyncCoordinationPrimitives</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
