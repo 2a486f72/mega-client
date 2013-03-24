@@ -1,5 +1,6 @@
 ﻿namespace Mega.Tests
 {
+	using System;
 	using System.Diagnostics;
 	using System.IO;
 	using System.Linq;
@@ -13,8 +14,8 @@
 	{
 		private static class TestData1
 		{
-			public const string Email = "";
-			public const string Password = "";
+			public static readonly string Email = File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Mega_Account.txt"));
+			public static readonly string Password = File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Mega_Password.txt"));
 		}
 
 		[TestMethod]

@@ -70,3 +70,5 @@ Automated tests
 The project comes with an automated test suite that tests both stand-alone pieces of functionality (e.g. crypto) and high-level client functionality (e.g. file upload/download).
 
 At the moment, a manually prepared test account set is used for high-level Mega functionality testing; this account is not published in the repository. A future goal is to create a test data generation script that lets you set up your own test account, so no credentials need to be saved in the source repository.
+
+The Mega test account credentials should be placed in text files Mega_Account.txt and Mega_Password.txt saved in the My Documents folder.
