@@ -2,11 +2,12 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>2a486f72.Mega.Client</id>
-		<version>1.0.0-beta2</version>
+		<version>1.0.0-beta3</version>
 		<authors>2a486f72</authors>
 		<owners />
 		<projectUrl>https://github.com/2a486f72/mega-client</projectUrl>
-		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<licenseUrl>http://www.gnu.org/copyleft/lesser.html</licenseUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<description>High-level client for Mega.</description>
 		<tags>Mega mega.co.nz</tags>
 		<dependencies>
