@@ -4,6 +4,8 @@
 	using System.Diagnostics;
 	using System.Globalization;
 	using System.Net.Http;
+	using System.Net.Http.Headers;
+	using System.Reflection;
 	using System.Threading;
 	using System.Threading.Tasks;
 	using AsyncCoordinationPrimitives;
@@ -129,6 +131,13 @@
 			// Generate a new random sequence ID to start with.
 			var sequenceIDBytes = Algorithms.GetRandomBytes(4);
 			_sequenceID = BitConverter.ToUInt32(sequenceIDBytes, 0);
+
+			var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+			var version = string.Format("{0}.{1}.{2}", assemblyVersion.Major, assemblyVersion.MajorRevision, assemblyVersion.Minor);
+			var userAgentHeader = new ProductInfoHeaderValue("2a486f72.Mega", version);
+
+			_outgoingClient.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
+			_incomingClient.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
 
 			Task.Factory.StartNew((Func<Task>)ReceiveIncomingMessages, _receiveIncomingMessagesCancellationSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 		}
