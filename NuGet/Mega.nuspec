@@ -7,7 +7,7 @@
 		<owners />
 		<projectUrl>https://github.com/2a486f72/mega-client</projectUrl>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
-		<description>Low-level API client for Mega. You probably want to use 2a486f72.Mega.Client instead, since is a more useful high-level client library.</description>
+		<description>Low-level API client for Mega. You probably want to use 2a486f72.Mega.Client instead, since that is a more useful high-level client library.</description>
 		<tags>Mega mega.co.nz</tags>
 		<dependencies>
 			<dependency id="Microsoft.AspNet.WebApi.Client" version="4.1.0-alpha-120809" />
