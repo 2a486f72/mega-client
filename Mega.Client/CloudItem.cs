@@ -753,8 +753,8 @@
 			_client = client;
 
 			Attributes = new ItemAttributes();
-			Children = ImmutableHashSet<CloudItem>.Empty;
-			EncryptedKeys = ImmutableHashSet<EncryptedItemKey>.Empty;
+			Children = ImmutableHashSet.Create<CloudItem>();
+			EncryptedKeys = ImmutableHashSet.Create<EncryptedItemKey>();
 		}
 
 		private readonly MegaClient _client;
