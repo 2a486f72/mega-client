@@ -2,6 +2,7 @@ mega-client
 ===========
 
 .NET 4.5 client library for the Mega API.
+Available as a NuGet package: 2a486f72.Mega
 
 The library consists of two layers:
 
