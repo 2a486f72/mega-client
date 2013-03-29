@@ -44,24 +44,21 @@ Usage
 
 The automated tests give you a good idea of how this library can be used. Here is an example snippet that simply downloads the biggest file in your cloud filesystem, without reporting any status to a UI:
 
-	[TestMethod]
-	public async Task DownloadingBigFile_SeemsToWork()
+	public async Task DownloadBiggestFile(string target)
 	{
-		var client = new MegaClient(TestData1.Email, TestData1.Password);
+		var client = new MegaClient("myaccount@example.com", "MySecretPassword123");
 		
-		var snapshot = await client.GetFilesystemSnapshotAsync();
+		var filesystem = await client.GetFilesystemSnapshotAsync();
 		
-		// Select the biggest file.
+		// Select the biggest file in the entire filesystem, no matter where it is located in the tree.
 		var file = snapshot.AllItems
-			.Where(i => i.Type == ItemType.File && i.Size.HasValue)
+			.Where(i => i.Type == ItemType.File)
 			.OrderByDescending(i => i.Size.Value)
 			.FirstOrDefault();
 		
 		if (file == null)
-			Assert.Inconclusive("Could not find a file to download.");
+			throw new Exception("There are no files in your account.");
 
-		// Download the file.
-		var target = Path.GetTempFileName();
 		await file.DownloadContentsAsync(target);
 	}
 
