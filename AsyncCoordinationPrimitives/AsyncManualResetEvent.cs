@@ -1,31 +1,38 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-
-public class AsyncManualResetEvent
+﻿namespace AsyncCoordinationPrimitives
 {
-    private volatile TaskCompletionSource<bool> m_tcs = new TaskCompletionSource<bool>();
+	using System.Threading;
+	using System.Threading.Tasks;
 
-    public async Task WaitAsync() { await m_tcs.Task; }
+	public class AsyncManualResetEvent
+	{
+		private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
 
-    public async void Set() 
-    {
-        var tcs = m_tcs;
-        await Task.Factory.StartNew(s =>
-                  ((TaskCompletionSource<bool>)s).TrySetResult(true),
-                  tcs, 
-                  CancellationToken.None, 
-                  TaskCreationOptions.PreferFairness, 
-                  TaskScheduler.Default); 
-    }
+		public async Task WaitAsync()
+		{
+			await _tcs.Task;
+		}
 
-    public void Reset()
-    {
-        while (true)
-        {
-            var tcs = m_tcs;
-            if (!tcs.Task.IsCompleted ||
-                Interlocked.CompareExchange(ref m_tcs, new TaskCompletionSource<bool>(), tcs) == tcs)
-                return;
-        }
-    }
+		public async void Set()
+		{
+			var tcs = _tcs;
+			await Task.Factory.StartNew(s =>
+				((TaskCompletionSource<bool>)s).TrySetResult(true),
+				tcs,
+				CancellationToken.None,
+				TaskCreationOptions.PreferFairness,
+				TaskScheduler.Default);
+		}
+
+		public void Reset()
+		{
+			while (true)
+			{
+				var tcs = _tcs;
+#pragma warning disable 420
+				if (!tcs.Task.IsCompleted || Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(), tcs) == tcs)
+#pragma warning restore 420
+					return;
+			}
+		}
+	}
 }

@@ -1,38 +1,35 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace AsyncCoordinationPrimitives
+﻿namespace AsyncCoordinationPrimitives
 {
-    public class AsyncBarrier
-    {
-        private readonly int m_participantCount;
-        private int m_remainingParticipants;
-        private ConcurrentStack<TaskCompletionSource<bool>> m_waiters;
+	using System;
+	using System.Collections.Concurrent;
+	using System.Threading;
+	using System.Threading.Tasks;
 
-        public AsyncBarrier(int participantCount)
-        {
-            if (participantCount <= 0) throw new ArgumentOutOfRangeException("participantCount");
-            m_remainingParticipants = m_participantCount = participantCount;
-            m_waiters = new ConcurrentStack<TaskCompletionSource<bool>>();
-        }
+	public class AsyncBarrier
+	{
+		private readonly int _participantCount;
+		private int _remainingParticipants;
+		private ConcurrentStack<TaskCompletionSource<bool>> _waiters;
 
-        public Task SignalAndWait()
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            m_waiters.Push(tcs);
-            if (Interlocked.Decrement(ref m_remainingParticipants) == 0)
-            {
-                m_remainingParticipants = m_participantCount;
-                var waiters = m_waiters;
-                m_waiters = new ConcurrentStack<TaskCompletionSource<bool>>();
-                Parallel.ForEach(waiters, w => w.SetResult(true));
-            }
-            return tcs.Task;
-        }
-    }
+		public AsyncBarrier(int participantCount)
+		{
+			if (participantCount <= 0) throw new ArgumentOutOfRangeException("participantCount");
+			_remainingParticipants = _participantCount = participantCount;
+			_waiters = new ConcurrentStack<TaskCompletionSource<bool>>();
+		}
+
+		public Task SignalAndWait()
+		{
+			var tcs = new TaskCompletionSource<bool>();
+			_waiters.Push(tcs);
+			if (Interlocked.Decrement(ref _remainingParticipants) == 0)
+			{
+				_remainingParticipants = _participantCount;
+				var waiters = _waiters;
+				_waiters = new ConcurrentStack<TaskCompletionSource<bool>>();
+				Parallel.ForEach(waiters, w => w.SetResult(true));
+			}
+			return tcs.Task;
+		}
+	}
 }

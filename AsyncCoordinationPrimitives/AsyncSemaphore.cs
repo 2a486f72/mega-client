@@ -1,59 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AsyncCoordinationPrimitives
+﻿namespace AsyncCoordinationPrimitives
 {
-    public class AsyncSemaphore
-    {
-        private readonly Queue<TaskCompletionSource<bool>> m_waiters = new Queue<TaskCompletionSource<bool>>();
-        private int m_currentCount;
-        private AsyncLock @lock = new AsyncLock();
+	using System;
+	using System.Collections.Generic;
+	using System.Threading.Tasks;
 
-        public AsyncSemaphore(int initialCount)
-        {
-            if (initialCount < 0) throw new ArgumentOutOfRangeException("initialCount");
-            m_currentCount = initialCount;
-        }
+	public class AsyncSemaphore
+	{
+		private readonly Queue<TaskCompletionSource<bool>> _waiters = new Queue<TaskCompletionSource<bool>>();
+		private int _currentCount;
+		private AsyncLock _lock = new AsyncLock();
 
-        public async Task WaitAsync()
-        {
-            TaskCompletionSource<bool> tcs;
+		public AsyncSemaphore(int initialCount)
+		{
+			if (initialCount < 0) throw new ArgumentOutOfRangeException("initialCount");
+			_currentCount = initialCount;
+		}
 
-            using(await @lock.LockAsync())
-            {
-                if (m_currentCount > 0)
-                {
-                    --m_currentCount;
-                    return;
-                }
-                else
-                {
-                    tcs = new TaskCompletionSource<bool>();
-                    m_waiters.Enqueue(tcs);
-                }
-            }
+		public async Task WaitAsync()
+		{
+			TaskCompletionSource<bool> tcs;
 
-            if (tcs != null)
-            {
-                await tcs.Task;
-            }
-        }
+			using (await _lock.LockAsync())
+			{
+				if (_currentCount > 0)
+				{
+					--_currentCount;
+					return;
+				}
+				else
+				{
+					tcs = new TaskCompletionSource<bool>();
+					_waiters.Enqueue(tcs);
+				}
+			}
 
-        public async void Release()
-        {
-            TaskCompletionSource<bool> toRelease = null;
-            using (await @lock.LockAsync())
-            {
-                if (m_waiters.Count > 0)
-                    toRelease = m_waiters.Dequeue();
-                else
-                    ++m_currentCount;
-            }
-            if (toRelease != null)
-                toRelease.SetResult(true);
-        }
-    }
+			if (tcs != null)
+			{
+				await tcs.Task;
+			}
+		}
+
+		public async void Release()
+		{
+			TaskCompletionSource<bool> toRelease = null;
+			using (await _lock.LockAsync())
+			{
+				if (_waiters.Count > 0)
+					toRelease = _waiters.Dequeue();
+				else
+					++_currentCount;
+			}
+			if (toRelease != null)
+				toRelease.SetResult(true);
+		}
+	}
 }

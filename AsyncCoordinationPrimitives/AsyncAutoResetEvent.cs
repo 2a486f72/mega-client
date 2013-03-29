@@ -1,53 +1,52 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AsyncCoordinationPrimitives
+﻿namespace AsyncCoordinationPrimitives
 {
-    public class AsyncAutoResetEvent
-    {
-        private readonly Queue<TaskCompletionSource<bool>> m_waits = new Queue<TaskCompletionSource<bool>>();
-        private bool m_signaled;
-        private AsyncLock @lock = new AsyncLock();
+	using System.Collections.Generic;
+	using System.Threading.Tasks;
 
-        public async Task WaitAsync()
-        {
-            TaskCompletionSource<bool> tcs;
+	public class AsyncAutoResetEvent
+	{
+		private readonly Queue<TaskCompletionSource<bool>> _waits = new Queue<TaskCompletionSource<bool>>();
+		private bool _signaled;
+		private AsyncLock _lock = new AsyncLock();
 
-            using(await @lock.LockAsync())
-            {
-                if (m_signaled)
-                {
-                    m_signaled = false;
-                    return;
-                }
-                else
-                {
-                    tcs = new TaskCompletionSource<bool>();
-                    m_waits.Enqueue(tcs);
-                }
-            }
+		public async Task WaitAsync()
+		{
+			TaskCompletionSource<bool> tcs;
 
-            if (tcs != null)
-            {
-                await tcs.Task;
-            }
-        }
+			using (await _lock.LockAsync())
+			{
+				if (_signaled)
+				{
+					_signaled = false;
+					return;
+				}
+				else
+				{
+					tcs = new TaskCompletionSource<bool>();
+					_waits.Enqueue(tcs);
+				}
+			}
 
-        public async void Set()
-        {
-            TaskCompletionSource<bool> toRelease = null;
-            using(await @lock.LockAsync())
-            {
-                if (m_waits.Count > 0)
-                    toRelease = m_waits.Dequeue();
-                else if (!m_signaled)
-                    m_signaled = true;
-            }
-            if (toRelease != null)
-                toRelease.SetResult(true);
-        }
-    }
+			if (tcs != null)
+			{
+				await tcs.Task;
+			}
+		}
+
+		public async void Set()
+		{
+			TaskCompletionSource<bool> toRelease = null;
+
+			using (await _lock.LockAsync())
+			{
+				if (_waits.Count > 0)
+					toRelease = _waits.Dequeue();
+				else if (!_signaled)
+					_signaled = true;
+			}
+
+			if (toRelease != null)
+				toRelease.SetResult(true);
+		}
+	}
 }
