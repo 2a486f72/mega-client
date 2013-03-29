@@ -44,12 +44,6 @@
 		public IImmutableSet<CloudItem> Children { get; internal set; }
 
 		/// <summary>
-		/// Whether this item is available for reading and modification.
-		/// This is false if the client does not have a key for the item.
-		/// </summary>
-		public bool IsAvailable { get; private set; }
-
-		/// <summary>
 		/// Gets whether this item can contain child items.
 		/// </summary>
 		public bool IsContainer
@@ -78,7 +72,7 @@
 				else if (Type == ItemType.Inbox)
 					return "Inbox";
 
-				if (IsAvailable)
+				if (Attributes != null && Attributes.ContainsKey("n"))
 				{
 					string name;
 					if (Attributes.TryGetValue("n", out name))
@@ -94,9 +88,6 @@
 
 				if (Type != ItemType.Folder && Type != ItemType.File)
 					throw new InvalidOperationException("You cannot rename a built-in filesystem item.");
-
-				if (!IsAvailable)
-					throw new InvalidOperationException("This item is not available for modification because you do not have a key for it.");
 
 				Attributes["n"] = value;
 			}
@@ -141,7 +132,7 @@
 				// We also protect against out of sync IsAvailable.
 				var itemKey = _client.TryDecryptItemKey(EncryptedKeys);
 
-				if (!IsAvailable || itemKey == null)
+				if (itemKey == null)
 					throw new InvalidOperationException("The contents of this file are not available because you do not have a key for it.");
 
 				var dataKey = Algorithms.DeriveNodeDataKey(itemKey);
@@ -651,9 +642,6 @@
 			if (Type != ItemType.File && Type != ItemType.Folder)
 				throw new InvalidOperationException("You can only modify files and folders.");
 
-			if (!IsAvailable)
-				throw new InvalidOperationException("This item is not available for modification because you do not have a key for it.");
-
 			using (await _client.AcquireLock(feedbackChannel, cancellationToken))
 			{
 				var itemKey = _client.TryDecryptItemKey(EncryptedKeys);
@@ -691,41 +679,47 @@
 				EncryptedKeys = template.EncryptedKeys.ToImmutableHashSet()
 			};
 
+			bool hasEncryptedData = true;
+
 			switch (template.Type)
 			{
 				case KnownItemTypes.File:
 					item.Type = ItemType.File;
+
+					if (!item.Size.HasValue || item.Size < 1)
+						throw new UnusableItemException("File does not have a valid size: " + item.Name);
 					break;
 				case KnownItemTypes.Folder:
 					item.Type = ItemType.Folder;
 					break;
 				case KnownItemTypes.Inbox:
 					item.Type = ItemType.Inbox;
-					item.IsAvailable = true; // No decryption required.
+					hasEncryptedData = false;
 					break;
 				case KnownItemTypes.Trash:
 					item.Type = ItemType.Trash;
-					item.IsAvailable = true; // No decryption required.
+					hasEncryptedData = false;
 					break;
 				case KnownItemTypes.Files:
 					item.Type = ItemType.Files;
-					item.IsAvailable = true; // No decryption required.
+					hasEncryptedData = false;
 					break;
 				default:
 					item.Type = ItemType.Unknown;
 					break;
 			}
 
-			// Decrypt the item attributes, if the item has them and if we have a key.
-			var itemKey = client.TryDecryptItemKey(item.EncryptedKeys);
-
-			if (itemKey != null)
+			if (hasEncryptedData)
 			{
+				// Decrypt the item attributes, if the item has them and if we have a key.
+				var itemKey = client.TryDecryptItemKey(item.EncryptedKeys);
+
+				if (itemKey == null)
+					throw new UnusableItemException("No key for item: " + item.Name);
+
 				// We have a key for this item!
 				var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
 				item.Attributes = ItemAttributes.DecryptAndDeserialize(template.Attributes, attributesKey);
-
-				item.IsAvailable = true;
 			}
 
 			return item;

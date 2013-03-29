@@ -18,8 +18,6 @@
 		}
 
 		public CloudItem Files { get; private set; }
-		public CloudItem Shares { get; private set; }
-		public CloudItem Contacts { get; private set; }
 		public CloudItem Trash { get; private set; }
 		public CloudItem Inbox { get; private set; }
 

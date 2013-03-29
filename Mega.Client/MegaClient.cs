@@ -403,8 +403,14 @@
 			foreach (var orphan in snapshot._orphans)
 				feedbackChannel.WriteWarning("Found orphaned item: {0} (ID {1})", orphan.Name, orphan.ID);
 
-			foreach (var item in snapshot.AllItems)
-				feedbackChannel.WriteVerbose("Got item: {0} ({1})", item.Name, item.Type);
+			if (snapshot.Files == null)
+				throw new ContractException("Mega did not provide us with a Files folder.");
+
+			if (snapshot.Inbox == null)
+				throw new ContractException("Mega did not provide us with an Inbox folder.");
+
+			if (snapshot.Trash == null)
+				throw new ContractException("Mega did not provide us with a Trash folder.");
 		}
 		#endregion
 

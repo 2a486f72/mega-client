@@ -196,5 +196,23 @@
 				}
 			}
 		}
+
+		[TestMethod]
+		[ExpectedException(typeof(UnusableItemException))]
+		public async Task FileWithInvalidSize_CannotBeUsed()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var filename = "EmptyFile";
+
+				await snapshot.Files.NewFileAsync(filename, new MemoryStream(0), feedback);
+			}
+		}
 	}
 }

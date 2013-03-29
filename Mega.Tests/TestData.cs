@@ -195,7 +195,7 @@
 			public CloudItem TryFind(FilesystemSnapshot filesystem)
 			{
 				return filesystem.AllItems
-					.FirstOrDefault(ci => ci.Type == ItemType.File && ci.IsAvailable && ci.Name == Name && ci.Size == Size);
+					.FirstOrDefault(ci => ci.Type == ItemType.File && ci.Name == Name && ci.Size == Size);
 			}
 
 			public TestFile(string name, long size)
