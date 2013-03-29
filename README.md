@@ -44,6 +44,7 @@ Usage
 
 The automated tests give you a good idea of how this library can be used. Here is an example snippet that simply downloads the biggest file in your cloud filesystem, without reporting any status to a UI:
 
+```CS
 	public async Task DownloadBiggestFile(string target)
 	{
 		var client = new MegaClient("myaccount@example.com", "MySecretPassword123");
@@ -61,6 +62,7 @@ The automated tests give you a good idea of how this library can be used. Here i
 
 		await file.DownloadContentsAsync(target);
 	}
+```
 
 Automated tests
 ===========
