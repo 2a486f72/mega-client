@@ -2,23 +2,25 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>2a486f72.Mega</id>
-		<version>1.0.0-beta3</version>
+		<version>1.0.0-beta4</version>
 		<authors>2a486f72</authors>
 		<owners />
 		<projectUrl>https://github.com/2a486f72/mega-client</projectUrl>
 		<licenseUrl>http://www.gnu.org/copyleft/lesser.html</licenseUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
-		<description>Low-level API client for Mega. You probably want to use 2a486f72.Mega.Client instead, since that is a more useful high-level client library.</description>
+		<description>.NET 4.5 client library for Mega.</description>
 		<tags>Mega mega.co.nz</tags>
 		<dependencies>
 			<dependency id="Microsoft.AspNet.WebApi.Client" version="4.1.0-alpha-120809" />
 			<dependency id="2a486f72.Useful" version="1.0.1" />
 			<dependency id="Microsoft.Net.Http" version="2.0.20710.0" />
 			<dependency id="Newtonsoft.Json" version="4.5.11" />
+			<dependency id="Microsoft.Bcl.Immutable" version="1.0.8-beta" />
 		</dependencies>
 	</metadata>
 	<files>
 		<file src="..\Mega\bin\release\2a486f72.Mega.dll" target="lib\net45" />
+		<file src="..\Mega.Client\bin\release\2a486f72.Mega.Client.dll" target="lib\net45" />
 		<file src="..\Mega\bin\release\AsyncCoordinationPrimitives.dll" target="lib\net45" />
 	</files>
 </package>
