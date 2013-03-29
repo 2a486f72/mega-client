@@ -8,7 +8,6 @@
 	using System.Reflection;
 	using System.Threading;
 	using System.Threading.Tasks;
-	using AsyncCoordinationPrimitives;
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
@@ -66,8 +65,9 @@
 			get { return _sessionID; }
 			set
 			{
-				using (_lock.LockAsync().Result)
+				using (SemaphoreLock.Take(_syncSemaphore))
 				{
+					
 					if (_sessionID == value)
 						return;
 
@@ -88,7 +88,7 @@
 			get { return _incomingSequenceReference; }
 			set
 			{
-				using (_lock.LockAsync().Result)
+				using (SemaphoreLock.Take(_syncSemaphore))
 					_incomingSequenceReference = value;
 			}
 		}
@@ -113,7 +113,7 @@
 		/// <summary>
 		/// Protects all the instance members of the channel.
 		/// </summary>
-		private readonly AsyncLock _lock = new AsyncLock();
+		private readonly SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1);
 
 		/// <summary>
 		/// A session-unique number that is incremented per dispatched request (but not changed when
@@ -191,7 +191,7 @@
 
 		private async Task<IDisposable> AcquireLock(CancellationToken cancellationToken)
 		{
-			var lockHolder = await _lock.TryLockAsync(TimeSpan.Zero);
+			var lockHolder = SemaphoreLock.TryTake(_syncSemaphore, TimeSpan.Zero);
 
 			if (lockHolder != null)
 				return lockHolder;
@@ -200,7 +200,7 @@
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
-				lockHolder = await _lock.TryLockAsync(TimeSpan.FromSeconds(0.1));
+				lockHolder = await SemaphoreLock.TryTakeAsync(_syncSemaphore, TimeSpan.FromSeconds(0.1));
 			}
 
 			return lockHolder;
@@ -279,7 +279,7 @@
 					return;
 
 				string url;
-				using (await _lock.LockAsync())
+				using (await SemaphoreLock.TakeAsync(_syncSemaphore))
 					url = TryDetermineIncomingMessageUrl();
 
 				if (url == null)

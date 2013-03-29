@@ -12,16 +12,25 @@
 	[TestClass]
 	public sealed class ClientTests
 	{
-		private static class TestData1
+		[TestMethod]
+		public async Task TestAccountInitialization_IsSuccessful()
 		{
-			public static readonly string Email = File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Mega_Account.txt"));
-			public static readonly string Password = File.ReadAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Mega_Password.txt"));
+			using (var connecting = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = connecting.BeginSubOperation("InitializeData"))
+				{
+					await TestData.Current.BringToInitialState(initializing);
+
+					var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+					await client.EnsureConnectedAsync(connecting);
+				}
+			}
 		}
 
 		[TestMethod]
 		public async Task SuccessfulLogin_IsSuccessful()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
+			var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 
 			using (var connecting = new DebugFeedbackChannel("Test"))
 				await client.EnsureConnectedAsync(connecting);
@@ -30,10 +39,12 @@
 		[TestMethod]
 		public async Task FilesystemLoad_DoesNotCauseApocalypse()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
 			using (var feedback = new DebugFeedbackChannel("Test"))
 			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 				await client.EnsureConnectedAsync(feedback);
 				await client.GetFilesystemSnapshotAsync(feedback);
 			}
@@ -42,68 +53,89 @@
 		[TestMethod]
 		public async Task AccountListLoad_DoesNotCauseApocalypse()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
 			using (var feedback = new DebugFeedbackChannel("Test"))
 			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 				await client.EnsureConnectedAsync(feedback);
 				await client.GetAccountListSnapshotAsync(feedback);
 			}
 		}
 
-		[TestMethod]
-		public async Task DownloadingFile_SeemsToWork()
+		private async Task TestFileDownload(TestData.TestFile testFile)
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
 			var target = Path.GetTempFileName();
-			Debug.WriteLine("Target file: " + target);
 
-			using (var feedback = new DebugFeedbackChannel("Test"))
+			try
 			{
-				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
+				Debug.WriteLine("Temporary local file: " + target);
 
-				var file = snapshot.AllItems.FirstOrDefault(i => i.Type == ItemType.File && i.IsAvailable);
+				using (var feedback = new DebugFeedbackChannel("Test"))
+				{
+					using (var initializing = feedback.BeginSubOperation("InitializeData"))
+						await TestData.Current.BringToInitialState(initializing);
 
-				if (file == null)
-					Assert.Inconclusive("Could not find a file to download.");
+					var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+					var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
 
-				await file.DownloadContentsAsync(target, feedback);
+					var file = testFile.TryFind(snapshot);
+
+					if (file == null)
+						Assert.Fail("Could not find expected file to download: " + testFile.Name);
+
+					await file.DownloadContentsAsync(target, feedback);
+
+					using (var expectedContents = testFile.Open())
+					using (var contents = File.OpenRead(target))
+					{
+						Assert.AreEqual(expectedContents.Length, contents.Length);
+
+						var reader = new BinaryReader(contents);
+						var expectedReader = new BinaryReader(expectedContents);
+
+						while (contents.Position != contents.Length)
+							Assert.AreEqual(expectedReader.ReadByte(), reader.ReadByte());
+					}
+				}
 			}
+			finally
+			{
+				File.Delete(target);
+			}
+		}
+		
+		[TestMethod]
+		public async Task DownloadingSmallFile_SeemsToWork()
+		{
+			await TestFileDownload(TestData.SmallFile);
+		}
+
+		[TestMethod]
+		public async Task DownloadingMediumFile_SeemsToWork()
+		{
+			await TestFileDownload(TestData.MediumFile);
 		}
 
 		[TestMethod]
 		public async Task DownloadingBigFile_SeemsToWork()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
-			var target = Path.GetTempFileName();
-			Debug.WriteLine("Target file: " + target);
-
-			using (var feedback = new DebugFeedbackChannel("Test"))
-			{
-				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
-
-				var file = snapshot.AllItems.Where(i => i.Type == ItemType.File && i.IsAvailable && i.Size.HasValue)
-					.OrderByDescending(i => i.Size.Value).FirstOrDefault();
-
-				if (file == null)
-					Assert.Inconclusive("Could not find a file to download.");
-
-				await file.DownloadContentsAsync(target, feedback);
-			}
+			await TestFileDownload(TestData.BigFile);
 		}
 
 		[TestMethod]
 		public async Task RenamingFile_SeemsToWork()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
 			using (var feedback = new DebugFeedbackChannel("Test"))
 			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
 
-				var file = snapshot.AllItems.FirstOrDefault(i => i.Type == ItemType.File && i.IsAvailable);
+				var file = TestData.SmallFile.TryFind(snapshot);
 
 				if (file == null)
 					Assert.Inconclusive("Could not find a file to rename.");
@@ -121,10 +153,12 @@
 		[TestMethod]
 		public async Task FolderCreation_SeemsToWork()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
 			using (var feedback = new DebugFeedbackChannel("Test"))
 			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
 
 				var filesRoot = snapshot.Files;
@@ -141,12 +175,15 @@
 		[TestMethod]
 		public async Task UploadingFile_SeemsToWork()
 		{
-			var client = new MegaClient(TestData1.Email, TestData1.Password);
-
-			using (var contents = Assembly.GetExecutingAssembly().GetManifestResourceStream("Mega.Tests.TestData.mediumsize.zip"))
+			using (var contents = new MemoryStream(TestHelper.GetRandomBytes(135511)))
 			{
+
 				using (var feedback = new DebugFeedbackChannel("Test"))
 				{
+					using (var initializing = feedback.BeginSubOperation("InitializeData"))
+						await TestData.Current.BringToInitialState(initializing);
+
+					var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 					var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
 
 					var filename = Algorithms.Base64Encode(Algorithms.GetRandomBytes(10));

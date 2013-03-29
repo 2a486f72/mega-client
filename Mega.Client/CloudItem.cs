@@ -12,7 +12,6 @@
 	using System.Threading.Tasks;
 	using Api;
 	using Api.Messages;
-	using AsyncCoordinationPrimitives;
 	using Newtonsoft.Json.Linq;
 	using Useful;
 
@@ -162,10 +161,10 @@
 
 				// Limit number of chunks in flight at the same time.
 				// Mega is extremely trigger happy here!
-				var concurrentDownloadSemaphore = new AsyncSemaphore(2);
+				var concurrentDownloadSemaphore = new SemaphoreSlim(2);
 
 				// Only one file write operation can take place at a time.
-				var writeLock = new AsyncLock();
+				var concurrentWriteSemaphore = new SemaphoreSlim(1);
 
 				// For progress calculations.
 				long completedBytes = 0;
@@ -188,9 +187,7 @@
 						{
 							byte[] bytes = null;
 
-							await concurrentDownloadSemaphore.WaitAsync();
-
-							try
+							using (await SemaphoreLock.TakeAsync(concurrentDownloadSemaphore))
 							{
 								await RetryHelper.ExecuteWithRetryAsync(async delegate
 								{
@@ -212,10 +209,6 @@
 										throw new MegaException(string.Format("Expected {0} bytes in chunk but got {1}.", chunkSizes[chunkIndex], bytes.Length));
 								}, ChunkDownloadRetryPolicy, chunkFeedbackChannel, chunkDownloadsCancellationSource.Token);
 							}
-							finally
-							{
-								concurrentDownloadSemaphore.Release();
-							}
 
 							chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
 
@@ -231,7 +224,7 @@
 							// Now write to file.
 							chunkFeedbackChannel.Status = "Writing to file";
 
-							using (await writeLock.LockAsync())
+							using (await SemaphoreLock.TakeAsync(concurrentWriteSemaphore))
 							{
 								file.Position = startOffset;
 								file.Write(bytes, 0, bytes.Length);
@@ -317,9 +310,6 @@
 		{
 			Argument.ValidateIsNotNullOrWhitespace(name, "name");
 
-			if (Children.Any(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
-				throw new ArgumentException("A folder with that name already exists in this folder.", "name");
-
 			if (name.IndexOfAny(new[] { '/', '\\' }) != -1)
 				throw new ArgumentException("A folder name cannot contain path separator characters.", "name");
 
@@ -371,9 +361,6 @@
 			Argument.ValidateIsNotNullOrWhitespace(name, "name");
 			Argument.ValidateIsNotNull(contents, "contents");
 
-			if (Children.Any(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
-				throw new ArgumentException("A file with that name already exists in this folder.", "name");
-
 			if (name.IndexOfAny(new[] { '/', '\\' }) != -1)
 				throw new ArgumentException("A file name cannot contain path separator characters.", "name");
 
@@ -414,10 +401,10 @@
 
 				// Limit number of chunks in flight at the same time.
 				// Mega is a bit too trigger happy here, so if this is more than 3, you get lots of rate limiting.
-				var concurrentUploadSemaphore = new AsyncSemaphore(3);
+				var concurrentUploadSemaphore = new SemaphoreSlim(2);
 
 				// Only one file read operation can take place at a time.
-				var readLock = new AsyncLock();
+				var concurrentReadSemaphore = new SemaphoreSlim(1);
 
 				// For progress calculations.
 				long completedBytes = 0;
@@ -438,13 +425,11 @@
 						{
 							byte[] bytes = new byte[chunkSizes[chunkIndex]];
 
-							await concurrentUploadSemaphore.WaitAsync();
-
-							try
+							using (await SemaphoreLock.TakeAsync(concurrentUploadSemaphore))
 							{
 								chunkUploadsCancellationSource.Token.ThrowIfCancellationRequested();
 
-								using (await readLock.LockAsync())
+								using (await SemaphoreLock.TakeAsync(concurrentReadSemaphore))
 								{
 									chunkUploadsCancellationSource.Token.ThrowIfCancellationRequested();
 
@@ -499,10 +484,6 @@
 									if (bytes.Length != chunkSizes[chunkIndex])
 										throw new MegaException(string.Format("Expected {0} bytes in chunk but got {1}.", chunkSizes[chunkIndex], bytes.Length));
 								}, ChunkUploadRetryPolicy, chunkFeedback, chunkUploadsCancellationSource.Token);
-							}
-							finally
-							{
-								concurrentUploadSemaphore.Release();
 							}
 
 							Interlocked.Add(ref completedBytes, chunkSizes[chunkIndex]);
@@ -645,6 +626,8 @@
 
 			using (await _client.AcquireLock(feedbackChannel, cancellationToken))
 			{
+				feedbackChannel.Status = "Deleting item: " + Name;
+
 				await _client.ExecuteCommandInternalAsync<SuccessResult>(feedbackChannel, cancellationToken, new DeleteItemCommand
 				{
 					ClientInstanceID = _client._clientInstanceID,
@@ -761,7 +744,7 @@
 
 		private static readonly RetryPolicy ChunkDownloadRetryPolicy = new RetryPolicy(RetryPolicy.ThirdPartyFaultExceptions, RetryPolicy.CarefulIntervals);
 
-		private static readonly RetryPolicy ChunkUploadRetryPolicy = new RetryPolicy(RetryPolicy.ThirdPartyFaultExceptions, RetryPolicy.FastAndAggressiveIntervals);
+		private static readonly RetryPolicy ChunkUploadRetryPolicy = new RetryPolicy(RetryPolicy.ThirdPartyFaultExceptions, RetryPolicy.CarefulIntervals);
 		#endregion
 	}
 }

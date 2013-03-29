@@ -53,7 +53,7 @@ The automated tests give you a good idea of how this library can be used. Here i
 		
 		// Select the biggest file.
 		var file = snapshot.AllItems
-			.Where(i => i.Type == ItemType.File && i.IsAvailable && i.Size.HasValue)
+			.Where(i => i.Type == ItemType.File && i.Size.HasValue)
 			.OrderByDescending(i => i.Size.Value)
 			.FirstOrDefault();
 		
@@ -70,6 +70,11 @@ Automated tests
 
 The project comes with an automated test suite that tests both stand-alone pieces of functionality (e.g. crypto) and high-level client functionality (e.g. file upload/download).
 
-At the moment, a manually prepared test account set is used for high-level Mega functionality testing; this account is not published in the repository. A future goal is to create a test data generation script that lets you set up your own test account, so no credentials need to be saved in the source repository.
+The test data is included and tests accounts are automatically populated with the relevant data. All you need to do is to create a file called MegaAccounts.json in your Documents folder. This file should include credentials for two Mega accounts to use for testing. The file format is shown below.
 
-The Mega test account credentials should be placed in text files Mega_Account.txt and Mega_Password.txt saved in the My Documents folder.
+	{
+		"Email1" : "megatest1@example.com",
+		"Password1" : "password1",
+		"Email2" : "megatest2@example.com",
+		"Password2" : "password2"
+	}

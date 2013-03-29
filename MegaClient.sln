@@ -1,10 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsyncCoordinationPrimitives", "AsyncCoordinationPrimitives\AsyncCoordinationPrimitives.csproj", "{DDE51973-EB4F-461A-961C-A0E28ADB9D49}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsyncCoordinationPrimitives.Tests", "AsyncCoordinationPrimitives.Tests\AsyncCoordinationPrimitives.Tests.csproj", "{E245537C-B32F-4654-9467-3C0A3E957197}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Resources", "Resources\Resources.csproj", "{42E98AE2-0E58-402E-B2C2-860DA11C7295}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{F07EA3CD-8E2B-4954-BF5B-7256AA6AEFC6}"
@@ -26,14 +22,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DDE51973-EB4F-461A-961C-A0E28ADB9D49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DDE51973-EB4F-461A-961C-A0E28ADB9D49}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DDE51973-EB4F-461A-961C-A0E28ADB9D49}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DDE51973-EB4F-461A-961C-A0E28ADB9D49}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E245537C-B32F-4654-9467-3C0A3E957197}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E245537C-B32F-4654-9467-3C0A3E957197}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E245537C-B32F-4654-9467-3C0A3E957197}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E245537C-B32F-4654-9467-3C0A3E957197}.Release|Any CPU.Build.0 = Release|Any CPU
 		{42E98AE2-0E58-402E-B2C2-860DA11C7295}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{42E98AE2-0E58-402E-B2C2-860DA11C7295}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42E98AE2-0E58-402E-B2C2-860DA11C7295}.Release|Any CPU.ActiveCfg = Release|Any CPU

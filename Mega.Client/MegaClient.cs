@@ -9,7 +9,6 @@
 	using System.Threading.Tasks;
 	using Api;
 	using Api.Messages;
-	using AsyncCoordinationPrimitives;
 	using Newtonsoft.Json.Linq;
 	using Useful;
 
@@ -289,7 +288,7 @@
 			{
 				e.Handled = true;
 
-				using (_lock.LockAsync().Result)
+				using (SemaphoreLock.Take(_syncSemaphore))
 				{
 					if (_currentFilesystemSnapshot == null)
 						return;
@@ -313,7 +312,7 @@
 			{
 				e.Handled = true;
 
-				using (_lock.LockAsync().Result)
+				using (SemaphoreLock.Take(_syncSemaphore))
 				{
 					if (_currentAccountListSnapshot == null)
 						return;
@@ -345,7 +344,7 @@
 			if (_currentFilesystemSnapshot != null)
 				return;
 
-			using (var loadingFilesystem = feedbackChannel.BeginSubOperation("Loading cloud filesystem and known account list"))
+			using (var loadingFilesystem = feedbackChannel.BeginSubOperation("Loading account data"))
 			{
 				loadingFilesystem.Status = "Loading encrypted filesystem";
 
@@ -410,12 +409,12 @@
 		#endregion
 
 		#region Locking and synchronization
-		private readonly AsyncLock _lock = new AsyncLock();
+		private readonly SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1);
 
 		internal async Task<IDisposable> AcquireLock(IFeedbackChannel feedbackChannel, CancellationToken cancellationToken)
 		{
 			// First try - if lock is free, we just grab it immediately.
-			var firstAttempt = await _lock.TryLockAsync(TimeSpan.Zero);
+			var firstAttempt = SemaphoreLock.TryTake(_syncSemaphore, TimeSpan.Zero);
 
 			if (firstAttempt != null)
 				return firstAttempt;
@@ -425,7 +424,7 @@
 			// Wait in a loop, checking for cancellation every now and then.
 			while (true)
 			{
-				var lockHolder = await _lock.TryLockAsync(TimeSpan.FromSeconds(0.1));
+				var lockHolder = await SemaphoreLock.TryTakeAsync(_syncSemaphore, TimeSpan.FromSeconds(0.1));
 
 				if (lockHolder != null)
 					return lockHolder;

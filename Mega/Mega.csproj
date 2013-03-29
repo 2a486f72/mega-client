@@ -42,9 +42,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="2a486f72.Useful, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="2a486f72.Useful, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\2a486f72.Useful.1.0.1\lib\portable-net45+win8+sl5+wp8\2a486f72.Useful.dll</HintPath>
+      <HintPath>..\packages\2a486f72.Useful.1.0.4\lib\portable-net45+win8\2a486f72.Useful.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
@@ -130,12 +130,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\AsyncCoordinationPrimitives\AsyncCoordinationPrimitives.csproj">
-      <Project>{dde51973-eb4f-461a-961c-a0e28adb9d49}</Project>
-      <Name>AsyncCoordinationPrimitives</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

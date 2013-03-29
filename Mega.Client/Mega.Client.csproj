@@ -40,9 +40,9 @@
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="2a486f72.Useful, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="2a486f72.Useful, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\2a486f72.Useful.1.0.1\lib\portable-net45+win8+sl5+wp8\2a486f72.Useful.dll</HintPath>
+      <HintPath>..\packages\2a486f72.Useful.1.0.4\lib\portable-net45+win8\2a486f72.Useful.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
@@ -81,10 +81,6 @@
     <Compile Include="RetryPolicy.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AsyncCoordinationPrimitives\AsyncCoordinationPrimitives.csproj">
-      <Project>{dde51973-eb4f-461a-961c-a0e28adb9d49}</Project>
-      <Name>AsyncCoordinationPrimitives</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Mega\Mega.csproj">
       <Project>{82f48588-6d20-4936-8301-63a20e5389d1}</Project>
       <Name>Mega</Name>

@@ -45,9 +45,9 @@
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="2a486f72.Useful, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="2a486f72.Useful, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\2a486f72.Useful.1.0.1\lib\portable-net45+win8+sl5+wp8\2a486f72.Useful.dll</HintPath>
+      <HintPath>..\packages\2a486f72.Useful.1.0.4\lib\portable-net45+win8\2a486f72.Useful.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -83,20 +83,16 @@
     <Compile Include="ClientTests.cs" />
     <Compile Include="DecryptKeyTests.cs" />
     <Compile Include="DeriveAesKeyTests.cs" />
-    <Compile Include="LockingLogicTests.cs" />
     <Compile Include="MpiTests.cs" />
     <Compile Include="RsaKeyTests.cs" />
     <Compile Include="RsaTests.cs" />
     <Compile Include="StringhashTests.cs" />
     <Compile Include="StringTests.cs" />
+    <Compile Include="TestData.cs" />
     <Compile Include="TestHelper.cs" />
     <Compile Include="TransactionTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AsyncCoordinationPrimitives\AsyncCoordinationPrimitives.csproj">
-      <Project>{DDE51973-EB4F-461A-961C-A0E28ADB9D49}</Project>
-      <Name>AsyncCoordinationPrimitives</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Mega.Client\Mega.Client.csproj">
       <Project>{e4d424c8-46dd-48f3-bc29-9a2867f8c31a}</Project>
       <Name>Mega.Client</Name>
@@ -108,7 +104,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <EmbeddedResource Include="TestData\mediumsize.zip" />
+    <Content Include="TestData\BigFile">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\MediumFile">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\SmallFile">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
