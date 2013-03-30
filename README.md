@@ -52,7 +52,7 @@ The automated tests give you a good idea of how this library can be used. Here i
 		var filesystem = await client.GetFilesystemSnapshotAsync();
 		
 		// Select the biggest file in the entire filesystem, no matter where it is located in the tree.
-		var file = snapshot.AllItems
+		var file = filesystem.AllItems
 			.Where(i => i.Type == ItemType.File)
 			.OrderByDescending(i => i.Size.Value)
 			.FirstOrDefault();
