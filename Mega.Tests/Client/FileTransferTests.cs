@@ -7,7 +7,8 @@
 	using Mega.Client;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-	[TestClass]
+	// NOTE: Commented out because these are really slow tests (30+ minutes!).
+	//[TestClass]
 	public sealed class FileTransferTests
 	{
 		/// <summary>
