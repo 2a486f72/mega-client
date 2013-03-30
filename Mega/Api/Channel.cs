@@ -176,10 +176,21 @@
 				result.EnsureSuccessStatusCode();
 
 				// API errors still come to us with 200 OK.
-				// API errors are treated as results, e.g. for a two-command transaction, we could get back [-1, -1]
+				// API errors are sometimes treated as results, e.g. for a two-command transaction, we could get back [-1, -1]
+				// But SOMETIMES they are not results! We could just get back -3 and that's it. Bit of a pain in the ass...
 
 				var responseBody = await result.Content.ReadAsStringAsync();
-				var results = JsonConvert.DeserializeObject<JArray>(responseBody);
+				Debug.WriteLine(responseBody);
+
+				var resultObject = JsonConvert.DeserializeObject(responseBody);
+				JArray results;
+
+				if (resultObject is JArray)
+					results = (JArray)resultObject; // We got a list of result codes.
+				else if (resultObject is JValue)
+					results = new JArray(resultObject); // We got a single result code. Just wrap it in an array for processing.
+				else
+					throw new MegaException(responseBody);
 
 				// Find any failure in the results and throw if found one.
 				foreach (var r in results)
