@@ -187,7 +187,7 @@
 
 				if (resultObject is JArray)
 					results = (JArray)resultObject; // We got a list of result codes.
-				else if (resultObject is JValue)
+				else if (resultObject is long)
 					results = new JArray(resultObject); // We got a single result code. Just wrap it in an array for processing.
 				else
 					throw new MegaException(responseBody);
