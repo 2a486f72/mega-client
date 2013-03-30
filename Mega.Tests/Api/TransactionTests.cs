@@ -1,10 +1,10 @@
-﻿namespace Mega.Tests
+﻿namespace Mega.Tests.Api
 {
 	using System;
 	using System.Collections.Generic;
 	using System.Threading;
 	using System.Threading.Tasks;
-	using Api;
+	using Mega.Api;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 	using Newtonsoft.Json.Linq;
 

@@ -5,7 +5,7 @@
 	using System.IO;
 	using System.Linq;
 	using System.Threading.Tasks;
-	using Client;
+	using Mega.Client;
 	using Newtonsoft.Json.Linq;
 	using Useful;
 
@@ -96,7 +96,7 @@
 				folder2.ID,
 				bigFile.ID,
 				mediumFile.ID,
-				smallFile.ID,
+				smallFile.ID
 			};
 
 			await DeleteUnwantedItems(filesystem1.Files, goodItems, feedback);

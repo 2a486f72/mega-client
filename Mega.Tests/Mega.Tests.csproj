@@ -76,21 +76,23 @@
     <Compile Include="..\Resources\SolutionAssemblyInfo.cs">
       <Link>Properties\SolutionAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="A32Tests.cs" />
-    <Compile Include="RetryHelperTests.cs" />
-    <Compile Include="Base64Tests.cs" />
-    <Compile Include="BigIntegerTests.cs" />
-    <Compile Include="ClientTests.cs" />
-    <Compile Include="DecryptKeyTests.cs" />
-    <Compile Include="DeriveAesKeyTests.cs" />
-    <Compile Include="MpiTests.cs" />
-    <Compile Include="RsaKeyTests.cs" />
-    <Compile Include="RsaTests.cs" />
-    <Compile Include="StringhashTests.cs" />
-    <Compile Include="StringTests.cs" />
+    <Compile Include="Algorithm\A32Tests.cs" />
+    <Compile Include="Client\FilesystemTests.cs" />
+    <Compile Include="Client\FileTransferTests.cs" />
+    <Compile Include="Client\RetryHelperTests.cs" />
+    <Compile Include="Algorithm\Base64Tests.cs" />
+    <Compile Include="Algorithm\BigIntegerTests.cs" />
+    <Compile Include="Algorithm\DecryptKeyTests.cs" />
+    <Compile Include="Algorithm\DeriveAesKeyTests.cs" />
+    <Compile Include="Algorithm\MpiTests.cs" />
+    <Compile Include="Algorithm\RsaKeyTests.cs" />
+    <Compile Include="Algorithm\RsaTests.cs" />
+    <Compile Include="Algorithm\StringhashTests.cs" />
+    <Compile Include="Algorithm\StringTests.cs" />
+    <Compile Include="Client\SanityTests.cs" />
     <Compile Include="TestData.cs" />
     <Compile Include="TestHelper.cs" />
-    <Compile Include="TransactionTests.cs" />
+    <Compile Include="Api\TransactionTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mega.Client\Mega.Client.csproj">

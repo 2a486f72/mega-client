@@ -1,4 +1,4 @@
-﻿namespace Mega.Tests
+﻿namespace Mega.Tests.Algorithm
 {
 	using System;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;

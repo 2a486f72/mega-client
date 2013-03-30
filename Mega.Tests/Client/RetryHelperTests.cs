@@ -1,9 +1,9 @@
-﻿namespace Mega.Tests
+﻿namespace Mega.Tests.Client
 {
 	using System;
 	using System.Threading;
 	using System.Threading.Tasks;
-	using Client;
+	using Mega.Client;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 	using Useful;
 
