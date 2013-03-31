@@ -160,6 +160,30 @@
 		}
 
 		[TestMethod]
+		public async Task MovingFolder_SeemsToWork()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var folder = filesystem.AllItems
+					.Single(ci => ci.Type == ItemType.Folder && ci.Name == "Folder2");
+
+				await folder.MoveAsync(filesystem.Trash, feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				folder = filesystem.AllItems
+					.Single(ci => ci.Type == ItemType.Folder && ci.Name == "Folder2");
+
+				Assert.AreEqual(filesystem.Trash, folder.Parent);
+			}
+		}
+
+		[TestMethod]
 		[ExpectedException(typeof(UnusableItemException))]
 		public async Task FileWithInvalidSize_CannotBeUsed()
 		{
