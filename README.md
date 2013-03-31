@@ -2,14 +2,15 @@ mega-client
 ===========
 
 .NET 4.5 client library for the Mega API.
-Available as a NuGet package: 2a486f72.Mega
+
+**Available as a NuGet package: 2a486f72.Mega**
 
 The library consists of two layers:
 
-1. A basic API messaging component that simply talks to Mega without understanding the message contents (Mega library).
-1. A high-level client that exposes Mega entities as an object model (Mega.Client library).
+1. A basic API messaging component that simply talks to Mega without understanding the message contents (`Mega` library).
+1. A high-level client that exposes Mega entities as an object model (`Mega.Client` library).
 
-For almost all purposes, you will want to use the high-level client.
+For almost all purposes, you will want to use the high-level client and its `MegaClient` class.
 
 Features
 ===========
@@ -68,8 +69,6 @@ Automated tests
 ===========
 
 The project comes with an automated test suite that tests both stand-alone pieces of functionality (e.g. crypto) and high-level client functionality (e.g. file upload/download).
-
-Note that some of the tests are very slow (marked with the "Slow" category) because they are intended to test the transfer of a large amount of data. In addition to pure bandwidth concerns, the Mega API is also very aggressive about slowing you down, so you probably will not be able to even use your full bandwidth - the rate limiting kicks in very fast.
 
 The test data is included and tests accounts are automatically populated with the relevant data. All you need to do is to create a file called MegaAccounts.json in your Documents folder. This file should include credentials for two Mega accounts to use for testing. The file format is shown below.
 

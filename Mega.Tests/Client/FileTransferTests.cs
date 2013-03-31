@@ -1,5 +1,6 @@
 ﻿namespace Mega.Tests.Client
 {
+	using System;
 	using System.Collections.Generic;
 	using System.Diagnostics;
 	using System.IO;
@@ -8,7 +9,7 @@
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 	// NOTE: Commented out because these are really slow tests (30+ minutes!).
-	//[TestClass]
+	[TestClass]
 	public sealed class FileTransferTests
 	{
 		/// <summary>
@@ -39,15 +40,7 @@
 
 					using (var expectedContents = testFile.Open())
 					using (var contents = File.OpenRead(target))
-					{
-						Assert.AreEqual(expectedContents.Length, contents.Length);
-
-						var reader = new BinaryReader(contents);
-						var expectedReader = new BinaryReader(expectedContents);
-
-						while (contents.Position != contents.Length)
-							Assert.AreEqual(expectedReader.ReadByte(), reader.ReadByte());
-					}
+						AssertStreamsAreEqual(expectedContents, contents);
 				}
 			}
 			finally
@@ -134,14 +127,8 @@
 				await file.DownloadContentsAsync(target, feedback);
 
 				using (var contents = File.OpenRead(target))
-				{
-					Assert.AreEqual(data.Length, contents.Length);
-
-					var reader = new BinaryReader(contents);
-
-					foreach (byte expectedByte in data)
-						Assert.AreEqual(expectedByte, reader.ReadByte());
-				}
+				using (var expectedContents = new MemoryStream(data))
+					AssertStreamsAreEqual(expectedContents, contents);
 			}
 			finally
 			{
@@ -187,6 +174,36 @@
 				foreach (var size in interestingSizes)
 					await TestFileUploadAndDownload(size, filesystem, feedback);
 			}
+		}
+
+		private static void AssertStreamsAreEqual(Stream a, Stream b)
+		{
+			Assert.AreEqual(a.Length, b.Length);
+
+			byte[] bufferA = new byte[1024 * 8];
+			byte[] bufferB = new byte[1024 * 8];
+
+			while (a.Position != a.Length)
+			{
+				var aLen = FillBufferWithData(bufferA, a);
+				var bLen = FillBufferWithData(bufferB, b);
+
+				Assert.AreEqual(aLen, bLen);
+
+				CollectionAssert.AreEqual(bufferA, bufferB);
+			}
+		}
+
+		private static int FillBufferWithData(byte[] buffer, Stream from)
+		{
+			int length = (int)Math.Min(buffer.Length, from.Length - from.Position);
+
+			int bytesRead = 0;
+
+			while (bytesRead < length)
+				bytesRead += from.Read(buffer, bytesRead, length - bytesRead);
+
+			return length;
 		}
 	}
 }

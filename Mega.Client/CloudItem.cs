@@ -151,8 +151,7 @@
 				var chunkMacs = new byte[chunkCount][];
 
 				// Limit number of chunks in flight at the same time.
-				// Mega is extremely trigger happy here!
-				var concurrentDownloadSemaphore = new SemaphoreSlim(2);
+				var concurrentDownloadSemaphore = new SemaphoreSlim(4);
 
 				// Only one file write operation can take place at a time.
 				var concurrentWriteSemaphore = new SemaphoreSlim(1);
@@ -189,8 +188,9 @@
 									// Range is inclusive, so do -1 for the end offset.
 									var url = result.DownloadUrl + "/" + startOffset + "-" + (endOffset - 1);
 
-									var client = new HttpClient();
-									var response = await client.GetAsyncCancellationSafe(url, chunkDownloadsCancellationSource.Token);
+									HttpResponseMessage response;
+									using (var client = new HttpClient())
+										response = await client.GetAsyncCancellationSafe(url, chunkDownloadsCancellationSource.Token);
 
 									response.EnsureSuccessStatusCode();
 
@@ -393,8 +393,7 @@
 				var nonce = Algorithms.GetRandomBytes(8);
 
 				// Limit number of chunks in flight at the same time.
-				// Mega is a bit too trigger happy here, so if this is more than 3, you get lots of rate limiting.
-				var concurrentUploadSemaphore = new SemaphoreSlim(2);
+				var concurrentUploadSemaphore = new SemaphoreSlim(4);
 
 				// Only one file read operation can take place at a time.
 				var concurrentReadSemaphore = new SemaphoreSlim(1);
@@ -447,8 +446,9 @@
 
 									var url = beginUploadResult.UploadUrl + "/" + startOffset;
 
-									var client = new HttpClient();
-									var response = await client.PostAsyncCancellationSafe(url, new ByteArrayContent(bytes), chunkUploadsCancellationSource.Token);
+									HttpResponseMessage response;
+									using (var client = new HttpClient())
+										response = await client.PostAsyncCancellationSafe(url, new ByteArrayContent(bytes), chunkUploadsCancellationSource.Token);
 
 									response.EnsureSuccessStatusCode();
 
