@@ -4,6 +4,7 @@
 	using System.Collections.Generic;
 	using System.Diagnostics;
 	using System.IO;
+	using System.Threading;
 	using System.Threading.Tasks;
 	using Mega.Client;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -203,6 +204,40 @@
 				bytesRead += from.Read(buffer, bytesRead, length - bytesRead);
 
 			return length;
+		}
+
+		[TestMethod]
+		[ExpectedException(typeof(OperationCanceledException))]
+		public async Task CancelingDownload_SeemsToWork()
+		{
+			var target = Path.GetTempFileName();
+
+			try
+			{
+				Debug.WriteLine("Temporary local file: " + target);
+
+				using (var feedback = new DebugFeedbackChannel("Test"))
+				{
+					using (var initializing = feedback.BeginSubOperation("InitializeData"))
+						await TestData.Current.BringToInitialState(initializing);
+
+					var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+					var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+					var file = TestData.BigFile.TryFind(filesystem);
+
+					if (file == null)
+						Assert.Fail("Could not find the test file to download.");
+
+					CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+
+					await file.DownloadContentsAsync(target, feedback, cts.Token);
+				}
+			}
+			finally
+			{
+				File.Delete(target);
+			}			
 		}
 	}
 }
