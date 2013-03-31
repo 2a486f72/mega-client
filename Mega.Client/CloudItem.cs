@@ -587,7 +587,7 @@
 			if (Type != ItemType.File && Type != ItemType.Folder)
 				throw new InvalidOperationException("You can only move files or folders.");
 
-			if (newParent.IsContainer)
+			if (!newParent.IsContainer)
 				throw new InvalidOperationException("The specified destination cannot contain other items.");
 
 			PatternHelper.LogMethodCall("MoveAsync", feedbackChannel, cancellationToken);
