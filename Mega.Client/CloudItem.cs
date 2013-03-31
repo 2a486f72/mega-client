@@ -335,6 +335,8 @@
 					}
 				});
 
+				_client.InvalidateFilesystemInternal();
+
 				return FromTemplate(result.Items.Single(), _client);
 			}
 		}
@@ -563,6 +565,8 @@
 					}
 				});
 
+				_client.InvalidateFilesystemInternal();
+
 				return FromTemplate(result.Items.Single(), _client);
 			}
 		}
@@ -597,6 +601,8 @@
 					ItemID = ID,
 					ParentID = newParent.ID
 				});
+
+				_client.InvalidateFilesystemInternal();
 			}
 		}
 		#endregion
@@ -624,6 +630,8 @@
 					ClientInstanceID = _client._clientInstanceID,
 					ItemID = ID,
 				});
+
+				_client.InvalidateFilesystemInternal();
 			}
 		}
 		#endregion
@@ -654,6 +662,8 @@
 					EncryptedItemKey = MyEncryptedItemKey.EncryptedKey,
 					Attributes = Attributes.SerializeAndEncrypt(attributesKey)
 				});
+
+				_client.InvalidateFilesystemInternal();
 			}
 		}
 		#endregion

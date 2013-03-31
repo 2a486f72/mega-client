@@ -2,6 +2,7 @@
 {
 	using System.Diagnostics;
 	using System.IO;
+	using System.Linq;
 	using System.Threading.Tasks;
 	using Mega.Client;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,12 +19,9 @@
 					await TestData.Current.BringToInitialState(initializing);
 
 				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
-				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
 
-				var file = TestData.SmallFile.TryFind(snapshot);
-
-				if (file == null)
-					Assert.Inconclusive("Could not find a file to rename.");
+				var file = TestData.SmallFile.Find(filesystem);
 
 				var newName = Algorithms.Base64Encode(Algorithms.GetRandomBytes(10));
 
@@ -32,6 +30,35 @@
 				file.Name = newName;
 
 				await file.SaveAsync(feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var newFile = filesystem.AllItems
+					.SingleOrDefault(ci => ci.Name == newName);
+
+				Assert.IsNotNull(newFile);
+			}
+		}
+
+		[TestMethod]
+		public async Task DeletingFile_SeemsToWork()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var file = TestData.SmallFile.Find(filesystem);
+
+				await file.DeleteAsync(feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				file = TestData.SmallFile.TryFind(filesystem);
+
+				Assert.IsNull(file);
 			}
 		}
 
@@ -44,19 +71,93 @@
 					await TestData.Current.BringToInitialState(initializing);
 
 				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
-				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
-
-				var filesRoot = snapshot.Files;
-				Assert.IsNotNull(filesRoot);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
 
 				var name = Algorithms.Base64Encode(TestHelper.GetRandomBytes(10));
-				var folder = await filesRoot.NewFolderAsync(name, feedback);
+				var folder = await filesystem.Files.NewFolderAsync(name, feedback);
 
 				Assert.IsNotNull(folder);
 				Assert.AreEqual(name, folder.Name);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				folder = filesystem.AllItems
+					.SingleOrDefault(ci => ci.Name == name);
+
+				Assert.IsNotNull(folder);
 			}
 		}
 
+		[TestMethod]
+		public async Task DeletingEmptyFolder_SeemsToWork()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var folder = filesystem.AllItems
+					.Single(ci => ci.Name == "Folder2" && ci.Type == ItemType.Folder);
+
+				Assert.IsNotNull(folder);
+
+				await folder.DeleteAsync(feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				folder = filesystem.AllItems
+					.SingleOrDefault(ci => ci.Name == "Folder2" && ci.Type == ItemType.Folder);
+
+				Assert.IsNull(folder);
+			}
+		}
+
+		[TestMethod]
+		public async Task DeletingFolderWithContents_SeemsToWork()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var folder = filesystem.AllItems
+					.Single(ci => ci.Name == "Folder1" && ci.Type == ItemType.Folder);
+
+				await folder.DeleteAsync(feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				folder = filesystem.AllItems
+					.SingleOrDefault(ci => ci.Name == "Folder1" && ci.Type == ItemType.Folder);
+
+				Assert.IsNull(folder);
+			}
+		}
+
+		[TestMethod]
+		public async Task MovingFile_SeemsToWork()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var file = TestData.SmallFile.Find(filesystem);
+
+				await file.MoveAsync(filesystem.Trash, feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				file = TestData.SmallFile.Find(filesystem);
+
+				Assert.AreEqual(filesystem.Trash, file.Parent);
+			}
+		}
 
 		[TestMethod]
 		[ExpectedException(typeof(UnusableItemException))]
@@ -72,6 +173,8 @@
 
 				var filename = "EmptyFile";
 
+				// The file is uploaded just fine but when you load the result, it has -1 size. Weird. Whatever.
+				// We throw an exception when trying to initialize such a CloudItem, so this should throw.
 				await snapshot.Files.NewFileAsync(filename, new MemoryStream(0), feedback);
 			}
 		}

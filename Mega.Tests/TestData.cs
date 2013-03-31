@@ -198,6 +198,19 @@
 					.FirstOrDefault(ci => ci.Type == ItemType.File && ci.Name == Name && ci.Size == Size);
 			}
 
+			/// <summary>
+			/// Finds the file in a filesystem snapshot. The location of the file is ignored, so not 100% but good enough.
+			/// </summary>
+			public CloudItem Find(FilesystemSnapshot filesystem)
+			{
+				var file = TryFind(filesystem);
+
+				if (file == null)
+					throw new ArgumentException("File was not found in cloud filesystem: " + Name);
+
+				return file;
+			}
+
 			public TestFile(string name, long size)
 			{
 				Name = name;

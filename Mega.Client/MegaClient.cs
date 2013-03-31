@@ -288,25 +288,8 @@
 			{
 				e.Handled = true;
 
-				using (SemaphoreLock.Take(_syncSemaphore))
-				{
-					if (_currentFilesystemSnapshot == null)
-						return;
-
-					// Just reset the whole thing. Only raise FilesystemChanged once after each snapshot is acuired.
-					_currentFilesystemSnapshot = null;
-				}
-
-				Task.Run(delegate
-				{
-					#region Raise FilesystemChanged(this, EventArgs.Empty)
-					{
-						var eventHandler = FilesystemChanged;
-						if (eventHandler != null)
-							eventHandler(this, EventArgs.Empty);
-					}
-					#endregion
-				});
+				using (AcquireLock().GetAwaiter().GetResult())
+					InvalidateFilesystemInternal();
 			}
 			else if (notificationName == AccountUpdatedNotification.NotificationNameConst)
 			{
@@ -336,6 +319,26 @@
 		#endregion
 
 		#region Filesystem management and operations
+		internal void InvalidateFilesystemInternal()
+		{
+			if (_currentFilesystemSnapshot == null)
+				return;
+
+			// Just reset the whole thing. Only raise FilesystemChanged once after each snapshot is acuired.
+			_currentFilesystemSnapshot = null;
+
+			Task.Run(delegate
+			{
+				#region Raise FilesystemChanged(this, EventArgs.Empty)
+				{
+					var eventHandler = FilesystemChanged;
+					if (eventHandler != null)
+						eventHandler(this, EventArgs.Empty);
+				}
+				#endregion
+			});
+		}
+
 		private FilesystemSnapshot _currentFilesystemSnapshot;
 		private ImmutableHashSet<CloudAccount> _currentAccountListSnapshot;
 
@@ -417,8 +420,10 @@
 		#region Locking and synchronization
 		private readonly SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1);
 
-		internal async Task<IDisposable> AcquireLock(IFeedbackChannel feedbackChannel, CancellationToken cancellationToken)
+		internal async Task<IDisposable> AcquireLock(IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
 		{
+			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
+
 			// First try - if lock is free, we just grab it immediately.
 			var firstAttempt = SemaphoreLock.TryTake(_syncSemaphore, TimeSpan.Zero);
 
