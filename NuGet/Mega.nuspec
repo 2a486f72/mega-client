@@ -2,13 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>2a486f72.Mega</id>
-		<version>1.0.0-beta6</version>
+		<version>1.0.0-beta8</version>
 		<authors>2a486f72</authors>
 		<owners />
 		<projectUrl>https://github.com/2a486f72/mega-client</projectUrl>
 		<licenseUrl>http://www.gnu.org/copyleft/lesser.html</licenseUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
-		<description>.NET 4.5 client library for Mega.</description>
+		<description>Mega SDK for .NET 4.5 (mega.co.nz)</description>
 		<tags>Mega</tags>
 		<dependencies>
 			<dependency id="Microsoft.AspNet.WebApi.Client" version="4.1.0-alpha-120809" />
