@@ -115,10 +115,9 @@
 			}
 		}
 
-		#region Contact list management
 		/// <summary>
-		/// Adds a contact to your contact list. If the account is not registered with Mega,
-		/// it will not appear in the contact list until it is registered.
+		/// Adds a contact to your contact list. If the account is not registered with Mega, an invitation email is sent.
+		/// The invited account will not appear in your contact list until it is registered.
 		/// </summary>
 		/// <param name="email">Email of the account to add to the contact list.</param>
 		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
@@ -147,7 +146,6 @@
 				InvalidateContactListInternal();
 			}
 		}
-		#endregion
 
 		#region Implementation details
 		private readonly byte[] _passwordKey;

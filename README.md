@@ -30,13 +30,14 @@ GOOD:
 * File upload.
 * File download.
 * Contact list functionality.
+* User invitation.
 
 BAD:
 * Share functionality.
 
 NONE:
 
-* User registration/invitation.
+* User registration.
 * Share URL creation.
 
 Usage
