@@ -63,6 +63,29 @@
 		}
 
 		[TestMethod]
+		public async Task DeletingFileTwice_DoesNoHarm()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var file = TestData.SmallFile.Find(filesystem);
+
+				await file.DeleteAsync(feedback);
+				await file.DeleteAsync(feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				file = TestData.SmallFile.TryFind(filesystem);
+
+				Assert.IsNull(file);
+			}
+		}
+
+		[TestMethod]
 		public async Task FolderCreation_SeemsToWork()
 		{
 			using (var feedback = new DebugFeedbackChannel("Test"))
@@ -103,6 +126,33 @@
 
 				Assert.IsNotNull(folder);
 
+				await folder.DeleteAsync(feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				folder = filesystem.AllItems
+					.SingleOrDefault(ci => ci.Name == "Folder2" && ci.Type == ItemType.Folder);
+
+				Assert.IsNull(folder);
+			}
+		}
+
+		[TestMethod]
+		public async Task DeletingEmptyFolderTwice_DoesNoHarm()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var folder = filesystem.AllItems
+					.Single(ci => ci.Name == "Folder2" && ci.Type == ItemType.Folder);
+
+				Assert.IsNotNull(folder);
+
+				await folder.DeleteAsync(feedback);
 				await folder.DeleteAsync(feedback);
 
 				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
@@ -160,6 +210,29 @@
 		}
 
 		[TestMethod]
+		public async Task MovingFileTwice_DoesNoHarm()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var file = TestData.SmallFile.Find(filesystem);
+
+				await file.MoveAsync(filesystem.Trash, feedback);
+				await file.MoveAsync(filesystem.Trash, feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				file = TestData.SmallFile.Find(filesystem);
+
+				Assert.AreEqual(filesystem.Trash, file.Parent);
+			}
+		}
+
+		[TestMethod]
 		public async Task MovingFolder_SeemsToWork()
 		{
 			using (var feedback = new DebugFeedbackChannel("Test"))
@@ -173,6 +246,31 @@
 				var folder = filesystem.AllItems
 					.Single(ci => ci.Type == ItemType.Folder && ci.Name == "Folder2");
 
+				await folder.MoveAsync(filesystem.Trash, feedback);
+
+				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+				folder = filesystem.AllItems
+					.Single(ci => ci.Type == ItemType.Folder && ci.Name == "Folder2");
+
+				Assert.AreEqual(filesystem.Trash, folder.Parent);
+			}
+		}
+
+		[TestMethod]
+		public async Task MovingFolderTwice_DoesNoHarm()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var filesystem = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var folder = filesystem.AllItems
+					.Single(ci => ci.Type == ItemType.Folder && ci.Name == "Folder2");
+
+				await folder.MoveAsync(filesystem.Trash, feedback);
 				await folder.MoveAsync(filesystem.Trash, feedback);
 
 				filesystem = await client.GetFilesystemSnapshotAsync(feedback);
