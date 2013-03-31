@@ -625,11 +625,18 @@
 			{
 				feedbackChannel.Status = "Deleting item: " + Name;
 
-				await _client.ExecuteCommandInternalAsync<SuccessResult>(feedbackChannel, cancellationToken, new DeleteItemCommand
+				try
 				{
-					ClientInstanceID = _client._clientInstanceID,
-					ItemID = ID,
-				});
+					await _client.ExecuteCommandInternalAsync<SuccessResult>(feedbackChannel, cancellationToken, new DeleteItemCommand
+					{
+						ClientInstanceID = _client._clientInstanceID,
+						ItemID = ID,
+					});
+				}
+				catch (ItemNotFoundException)
+				{
+					// Already deleted? Oh happy days!
+				}
 
 				_client.InvalidateFilesystemInternal();
 			}
