@@ -29,11 +29,10 @@ GOOD:
 * Filesystem operations.
 * File upload.
 * File download.
+* Contact list functionality.
 
 BAD:
-
 * Share functionality.
-* Contact list functionality.
 
 NONE:
 

@@ -44,13 +44,17 @@
 		/// -- SmallFile
 		/// - BigFile
 		/// - MediumFile
+		/// Contacts
 		/// 
 		/// Account 2 contents:
-		/// (empty)
+		/// Files
+		/// Contacts
+		/// - Account 1
 		/// </remarks>
 		public async Task BringToInitialState(IFeedbackChannel feedback)
 		{
 			var client1 = new MegaClient(Email1, Password1);
+			var client2 = new MegaClient(Email2, Password2);
 
 			var filesystem1 = await client1.GetFilesystemSnapshotAsync(feedback);
 
@@ -89,7 +93,7 @@
 				using (var stream = OpenTestDataFile(BigFile.Name))
 					bigFile = await filesystem1.Files.NewFileAsync(BigFile.Name, stream, feedback);
 
-			// Delete all items that we do not care about.
+			// Delete all items that we do not care about for account 1.
 			var goodItems = new[]
 			{
 				folder1.ID,
@@ -100,6 +104,23 @@
 			};
 
 			await DeleteUnwantedItems(filesystem1.Files, goodItems, feedback);
+			await DeleteUnwantedItems(filesystem1.Trash, goodItems, feedback);
+
+			// Delete all files and folders for account 2.
+			var filesystem2 = await client2.GetFilesystemSnapshotAsync(feedback);
+
+			foreach (var item in filesystem2.AllItems.Where(ci => ci.Type == ItemType.File || ci.Type == ItemType.Folder))
+				await item.DeleteAsync(feedback);
+
+			// Delete all contacts.
+			foreach (var contact in await client1.GetContactListAsync(feedback))
+				await contact.RemoveAsync(feedback);
+
+			foreach (var contact in await client2.GetContactListAsync(feedback))
+				await contact.RemoveAsync(feedback);
+
+			// Add account 1 as contact to account 2.
+			await client2.AddContactAsync(Email1, feedback);
 		}
 
 		private async Task DeleteUnwantedItems(CloudItem rootDirectory, ICollection<OpaqueID> wantedItems, IFeedbackChannel feedback)

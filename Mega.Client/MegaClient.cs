@@ -44,29 +44,29 @@
 
 			using (await AcquireLock(feedbackChannel, cancellationToken))
 			{
-				await EnsureFilesystemAvailableAsync(feedbackChannel, cancellationToken);
+				await EnsureFilesystemAndContactlistAvailableAsync(feedbackChannel, cancellationToken);
 
 				return _currentFilesystemSnapshot;
 			}
 		}
 
 		/// <summary>
-		/// Gets a snapshot of the account list's current state. You can use this snapshot to operate with contacts and
-		/// known accounts (e.g. create shares for them).on the filesystem. The snapshot itself is not kept up to date
+		/// Gets a snapshot of the contact list's current state. You can use this snapshot to operate with
+		/// contacts (e.g. create shares for them). The snapshot itself is not kept up to date
 		/// by the client, so you should get a new snapshot after performing operations on it.
 		/// </summary>
 		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
 		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
-		public async Task<IImmutableSet<CloudAccount>> GetAccountListSnapshotAsync(IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<IImmutableSet<Contact>> GetContactListAsync(IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			PatternHelper.LogMethodCall("GetAccountListSnapshotAsync", feedbackChannel, cancellationToken);
+			PatternHelper.LogMethodCall("GetContactListAsync", feedbackChannel, cancellationToken);
 			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
 
 			using (await AcquireLock(feedbackChannel, cancellationToken))
 			{
-				await EnsureFilesystemAvailableAsync(feedbackChannel, cancellationToken);
+				await EnsureFilesystemAndContactlistAvailableAsync(feedbackChannel, cancellationToken);
 
-				return _currentAccountListSnapshot;
+				return _currentContactListSnapshot;
 			}
 		}
 
@@ -76,9 +76,9 @@
 		public event EventHandler FilesystemChanged;
 
 		/// <summary>
-		/// Event raised when the known account list has been updated from the server and a new account list snapshot is available.
+		/// Event raised when the contact list has been updated from the server and a new contact list snapshot is available.
 		/// </summary>
-		public event EventHandler AccountListChanged;
+		public event EventHandler ContactListChanged;
 
 		public MegaClient(string email, string password)
 		{
@@ -114,6 +114,40 @@
 				await EnsureConnectedInternalAsync(feedbackChannel, cancellationToken);
 			}
 		}
+
+		#region Contact list management
+		/// <summary>
+		/// Adds a contact to your contact list. If the account is not registered with Mega,
+		/// it will not appear in the contact list until it is registered.
+		/// </summary>
+		/// <param name="email">Email of the account to add to the contact list.</param>
+		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
+		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
+		public async Task AddContactAsync(string email, IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			Argument.ValidateIsNotNullOrWhitespace(email, "email");
+
+			if (!email.Contains("@"))
+				throw new ArgumentException("That does not look like an e-mail address.", "email");
+
+			PatternHelper.LogMethodCall("AddContactAsync", feedbackChannel, cancellationToken);
+			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
+
+			using (await AcquireLock(feedbackChannel, cancellationToken))
+			{
+				await EnsureConnectedInternalAsync(feedbackChannel, cancellationToken);
+
+				await ExecuteCommandInternalAsync<Account>(feedbackChannel, cancellationToken, new SetContactStatusCommand
+				{
+					AccountIDOrEmail = email,
+					ClientInstanceID = _clientInstanceID,
+					Status = KnownContactStatuses.InContactList
+				});
+
+				InvalidateContactListInternal();
+			}
+		}
+		#endregion
 
 		#region Implementation details
 		private readonly byte[] _passwordKey;
@@ -295,25 +329,8 @@
 			{
 				e.Handled = true;
 
-				using (SemaphoreLock.Take(_syncSemaphore))
-				{
-					if (_currentAccountListSnapshot == null)
-						return;
-
-					// Just reset the whole thing. Only raise AccountListChanged once after the list is acuired.
-					_currentAccountListSnapshot = null;
-				}
-
-				Task.Run(delegate
-				{
-					#region Raise AccountListChanged(this, EventArgs.Empty)
-					{
-						var eventHandler = AccountListChanged;
-						if (eventHandler != null)
-							eventHandler(this, EventArgs.Empty);
-					}
-					#endregion
-				});
+				using (AcquireLock().GetAwaiter().GetResult())
+					InvalidateContactListInternal();
 			}
 		}
 		#endregion
@@ -339,12 +356,32 @@
 			});
 		}
 
-		private FilesystemSnapshot _currentFilesystemSnapshot;
-		private ImmutableHashSet<CloudAccount> _currentAccountListSnapshot;
-
-		internal async Task EnsureFilesystemAvailableAsync(IFeedbackChannel feedbackChannel, CancellationToken cancellationToken)
+		internal void InvalidateContactListInternal()
 		{
-			if (_currentFilesystemSnapshot != null)
+			if (_currentContactListSnapshot == null)
+				return;
+
+			// Just reset the whole thing. Only raise ContactListChanged once after the list is acuired.
+			_currentContactListSnapshot = null;
+
+			Task.Run(delegate
+			{
+				#region Raise ContactListChanged(this, EventArgs.Empty)
+				{
+					var eventHandler = ContactListChanged;
+					if (eventHandler != null)
+						eventHandler(this, EventArgs.Empty);
+				}
+				#endregion
+			});
+		}
+
+		private FilesystemSnapshot _currentFilesystemSnapshot;
+		private ImmutableHashSet<Contact> _currentContactListSnapshot;
+
+		internal async Task EnsureFilesystemAndContactlistAvailableAsync(IFeedbackChannel feedbackChannel, CancellationToken cancellationToken)
+		{
+			if (_currentFilesystemSnapshot != null && _currentContactListSnapshot != null)
 				return;
 
 			using (var loadingFilesystem = feedbackChannel.BeginSubOperation("Loading account data"))
@@ -368,9 +405,13 @@
 
 				CheckSnapshotIntegrity(snapshot, loadingFilesystem, cancellationToken);
 
-				feedbackChannel.Status = "Loading account list";
+				feedbackChannel.Status = "Loading contact list";
 
-				_currentAccountListSnapshot = filesystem.KnownAccounts.Select(a => CloudAccount.FromTemplate(a, this)).ToImmutableHashSet();
+				// We only keep accounts that are marked as contacts.
+				_currentContactListSnapshot = filesystem.KnownAccounts
+					.Where(a => a.AccountType == KnownAccountTypes.InContactList)
+					.Select(a => Contact.FromTemplate(a, this))
+					.ToImmutableHashSet();
 
 				_currentFilesystemSnapshot = snapshot;
 			}

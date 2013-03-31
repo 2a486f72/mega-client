@@ -19,7 +19,10 @@
 		[JsonProperty("l")]
 		public int Status { get; set; }
 
+		/// <summary>
+		/// ID if you know it, email otherwise.
+		/// </summary>
 		[JsonProperty("u")]
-		public string Email { get; set; }
+		public string AccountIDOrEmail { get; set; }
 	}
 }

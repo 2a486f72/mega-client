@@ -16,6 +16,12 @@
 		public int C;
 
 		/// <summary>
+		/// ?? 1 is used when right click and Reload is done on Contacts.
+		/// </summary>
+		[JsonProperty("r")]
+		public int R;
+
+		/// <summary>
 		/// If specified, only gets the indicated item and its children.
 		/// </summary>
 		[JsonProperty("n")]

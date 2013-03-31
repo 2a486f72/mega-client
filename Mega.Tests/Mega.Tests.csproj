@@ -77,6 +77,7 @@
       <Link>Properties\SolutionAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Algorithm\A32Tests.cs" />
+    <Compile Include="Client\ContactListTests.cs" />
     <Compile Include="Client\FilesystemTests.cs" />
     <Compile Include="Client\FileTransferTests.cs" />
     <Compile Include="Client\RetryHelperTests.cs" />
