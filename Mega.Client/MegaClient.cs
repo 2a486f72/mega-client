@@ -254,11 +254,11 @@
 		private Channel _channel;
 
 		/// <summary>
-		/// Attempts to find and decrypt an item key that is encrypted with an available master key.
-		/// If none of the item keys use a master key we can access, returns null.
+		/// Finds and decrypts an item key that is encrypted with an available master key.
+		/// If none of the item keys use a master key we can access, throws an exception.
 		/// </summary>
 		/// <param name="itemKeys">Set of candidate item keys, encrypted with a master (AES or RSA) key of an account or share.</param>
-		internal byte[] TryDecryptItemKey(IReadOnlyCollection<EncryptedItemKey> itemKeys)
+		internal byte[] DecryptItemKey(IReadOnlyCollection<EncryptedItemKey> itemKeys)
 		{
 			Argument.ValidateIsNotNull(itemKeys, "itemKeys");
 
@@ -289,7 +289,7 @@
 				}
 			}
 
-			return null;
+			throw new UnusableItemException("We do not have a key for this item.");
 		}
 
 		#region Connection and session management

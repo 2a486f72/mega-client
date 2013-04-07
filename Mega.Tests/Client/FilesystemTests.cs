@@ -1,5 +1,6 @@
 ﻿namespace Mega.Tests.Client
 {
+	using System;
 	using System.Diagnostics;
 	using System.IO;
 	using System.Linq;
@@ -282,8 +283,7 @@
 		}
 
 		[TestMethod]
-		[ExpectedException(typeof(UnusableItemException))]
-		public async Task FileWithInvalidSize_CannotBeUsed()
+		public async Task CreatingEmptyFile_SeemsToWork()
 		{
 			using (var feedback = new DebugFeedbackChannel("Test"))
 			{
@@ -295,9 +295,39 @@
 
 				var filename = "EmptyFile";
 
-				// The file is uploaded just fine but when you load the result, it has -1 size. Weird. Whatever.
-				// We throw an exception when trying to initialize such a CloudItem, so this should throw.
-				await snapshot.Files.NewFileAsync(filename, new MemoryStream(0), feedback);
+				var file = await snapshot.Files.NewFileAsync(filename, new MemoryStream(0), feedback);
+
+				Assert.AreEqual(filename, file.Name);
+				Assert.AreEqual(false, file.HasContents);
+			}
+		}
+
+		[TestMethod]
+		[ExpectedException(typeof(InvalidOperationException))]
+		public async Task DownloadingEmptyFile_DoesNotWork()
+		{
+			using (var feedback = new DebugFeedbackChannel("Test"))
+			{
+				using (var initializing = feedback.BeginSubOperation("InitializeData"))
+					await TestData.Current.BringToInitialState(initializing);
+
+				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
+				var snapshot = await client.GetFilesystemSnapshotAsync(feedback);
+
+				var filename = "EmptyFile";
+
+				var file = await snapshot.Files.NewFileAsync(filename, new MemoryStream(0), feedback);
+
+				var target = Path.GetTempFileName();
+
+				try
+				{
+					await file.DownloadContentsAsync(target, feedback);
+				}
+				finally
+				{
+					File.Delete(target);
+				}
 			}
 		}
 	}

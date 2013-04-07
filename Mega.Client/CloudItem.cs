@@ -22,9 +22,13 @@
 	{
 		#region Read-only data
 		public OpaqueID ID { get; private set; }
-		public OpaqueID? ParentID { get; internal set; }
+
+		/// <summary>
+		/// ID of the account that owns this item.
+		/// </summary>
 		public OpaqueID OwnerID { get; private set; }
 
+		public OpaqueID? ParentID { get; internal set; }
 		public CloudItem Parent { get; internal set; }
 
 		public ItemType Type { get; private set; }
@@ -36,6 +40,15 @@
 		public int TypeID { get; private set; }
 
 		public long? Size { get; private set; }
+
+		/// <summary>
+		/// Gets whether the item has any contents (as in, file contents).
+		/// It is possible for even files to be without contents - they can just exist as filesystem items that cannot be downloaded.
+		/// </summary>
+		public bool HasContents
+		{
+			get { return Size.HasValue && Size.Value > 0; }
+		}
 
 		public DateTimeOffset LastUpdated { get; private set; }
 
@@ -129,8 +142,8 @@
 		{
 			Argument.ValidateIsNotNullOrWhitespace(destinationPath, "destinationPath");
 
-			if (Type != ItemType.File)
-				throw new InvalidOperationException("You can only download files.");
+			if (Type != ItemType.File || !HasContents)
+				throw new InvalidOperationException("You can only download files that have contents.");
 
 			PatternHelper.LogMethodCall("DownloadContentsAsync", feedbackChannel, cancellationToken);
 			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
@@ -147,12 +160,7 @@
 
 				feedbackChannel.Status = "Preparing for download";
 
-				// We also protect against out of sync IsAvailable.
-				var itemKey = _client.TryDecryptItemKey(EncryptedKeys);
-
-				if (itemKey == null)
-					throw new InvalidOperationException("The contents of this file are not available because you do not have a key for it.");
-
+				var itemKey = _client.DecryptItemKey(EncryptedKeys);
 				var dataKey = Algorithms.DeriveNodeDataKey(itemKey);
 				var nonce = itemKey.Skip(16).Take(8).ToArray();
 				var metaMac = itemKey.Skip(24).Take(8).ToArray();
@@ -314,7 +322,6 @@
 		/// <param name="name">The name of the folder.</param>
 		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
 		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
-		/// <returns></returns>
 		public async Task<CloudItem> NewFolderAsync(string name, IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
 		{
 			Argument.ValidateIsNotNullOrWhitespace(name, "name");
@@ -682,7 +689,7 @@
 
 			using (await _client.AcquireLock(feedbackChannel, cancellationToken))
 			{
-				var itemKey = _client.TryDecryptItemKey(EncryptedKeys);
+				var itemKey = _client.DecryptItemKey(EncryptedKeys);
 				var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
 
 				// Encrypt the item with the current account's AES key.
@@ -729,11 +736,7 @@
 
 				foreach (var item in itemsToSend)
 				{
-					var itemKey = _client.TryDecryptItemKey(item.EncryptedKeys);
-
-					if (itemKey == null)
-						throw new ContractException("We somehow lost the key for item " + item.Name);
-
+					var itemKey = _client.DecryptItemKey(item.EncryptedKeys);
 					var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
 					var contactEncryptedKey = Algorithms.RsaEncrypt(itemKey, contactPublicKey);
 
@@ -775,7 +778,8 @@
 			CloudItem item = new CloudItem(client)
 			{
 				TypeID = template.Type,
-				Size = template.Size,
+				// Filter out invalid sizes that Mega does not work with (anything less than 1).
+				Size = template.Size.GetValueOrDefault() > 0 ? (long?)template.Size.Value : null,
 				ID = template.ID,
 				OwnerID = template.OwnerID,
 				LastUpdated = new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero).AddSeconds(template.Timestamp).ToLocalTime(),
@@ -790,9 +794,6 @@
 			{
 				case KnownItemTypes.File:
 					item.Type = ItemType.File;
-
-					if (!item.Size.HasValue || item.Size < 1)
-						throw new UnusableItemException("File does not have a valid size: " + item.Name);
 					break;
 				case KnownItemTypes.Folder:
 					item.Type = ItemType.Folder;
@@ -817,10 +818,7 @@
 			if (hasEncryptedData)
 			{
 				// Decrypt the item attributes, if the item has them and if we have a key.
-				var itemKey = client.TryDecryptItemKey(item.EncryptedKeys);
-
-				if (itemKey == null)
-					throw new UnusableItemException("No key for item: " + item.Name);
+				var itemKey = client.DecryptItemKey(item.EncryptedKeys);
 
 				// We have a key for this item!
 				var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
