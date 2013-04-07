@@ -31,6 +31,7 @@ GOOD:
 * File download.
 * Contact list functionality.
 * User invitation.
+* Send files/folders to contact.
 
 BAD:
 * Share functionality.
