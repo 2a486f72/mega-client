@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
-		<id>2a486f72.Mega</id>
-		<version>1.0.0-beta8</version>
+		<id>Mega</id>
+		<version>1.0.0-beta9</version>
 		<authors>2a486f72</authors>
 		<owners />
 		<projectUrl>https://github.com/2a486f72/mega-client</projectUrl>

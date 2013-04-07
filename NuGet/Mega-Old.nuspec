@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+	<metadata>
+		<id>2a486f72.Mega</id>
+		<version>1.0.0-beta9</version>
+		<authors>2a486f72</authors>
+		<owners />
+		<projectUrl>https://github.com/2a486f72/mega-client</projectUrl>
+		<licenseUrl>http://www.gnu.org/copyleft/lesser.html</licenseUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<description>Mega SDK for .NET 4.5 (mega.co.nz). Obsolete - use package Mega instead.</description>
+		<tags>Mega</tags>
+		<dependencies>
+			<dependency id="Mega" version="1.0.9-beta" />
+		</dependencies>
+	</metadata>
+	<files>
+		<file src="Empty" target="lib\net45" />
+	</files>
+</package>
