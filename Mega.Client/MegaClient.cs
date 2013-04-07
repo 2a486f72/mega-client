@@ -522,7 +522,7 @@
 					else
 					{
 						// ???
-						loadingFilesystem.WriteWarning("Unable to determine share key type. ID_{0}, length {1}", item.ID, item.ShareKey.Value.Bytes.Length);
+						loadingFilesystem.WriteWarning("Unable to determine share key type. ID_{0}, length {1} parent ID_{2}", item.ID, item.ShareKey.Value.Bytes.Length, item.ParentID);
 						continue;
 					}
 
@@ -546,6 +546,11 @@
 					.ToImmutableHashSet();
 
 				_currentFilesystemSnapshot = snapshot;
+
+				foreach (var item in snapshot.AllItems)
+				{
+					loadingFilesystem.WriteVerbose("Got {0}, ID_{1}, {2}", item.Name, item.ID, item.Type);
+				}
 			}
 		}
 

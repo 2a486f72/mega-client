@@ -50,6 +50,12 @@
 		}
 
 		[TestMethod]
+		public async Task DownloadingEmptyFile_SeemsToWork()
+		{
+			await TestFileDownload(TestData.EmptyFile);
+		}
+
+		[TestMethod]
 		public async Task DownloadingSmallFile_SeemsToWork()
 		{
 			await TestFileDownload(TestData.SmallFile);
@@ -142,6 +148,7 @@
 		{
 			var interestingSizes = new List<int>
 			{
+				0,
 				1,
 				8,
 				15,

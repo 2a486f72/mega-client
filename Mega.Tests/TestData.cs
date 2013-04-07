@@ -41,6 +41,7 @@
 		/// Files
 		/// - Folder1
 		/// -- Folder2
+		/// --- EmptyFile
 		/// -- SmallFile
 		/// - BigFile
 		/// - MediumFile
@@ -79,8 +80,13 @@
 			var bigFile = BigFile.TryFind(filesystem1);
 			var mediumFile = MediumFile.TryFind(filesystem1);
 			var smallFile = SmallFile.TryFind(filesystem1);
+			var emptyFile = EmptyFile.TryFind(filesystem1);
 
 			// Then upload the new files.
+			if (emptyFile == null)
+				using (var stream = OpenTestDataFile(EmptyFile.Name))
+					emptyFile = await folder2.NewFileAsync(EmptyFile.Name, stream, feedback);
+
 			if (smallFile == null)
 				using (var stream = OpenTestDataFile(SmallFile.Name))
 					smallFile = await folder1.NewFileAsync(SmallFile.Name, stream, feedback);
@@ -100,7 +106,8 @@
 				folder2.ID,
 				bigFile.ID,
 				mediumFile.ID,
-				smallFile.ID
+				smallFile.ID,
+				emptyFile.ID
 			};
 
 			await DeleteUnwantedItems(filesystem1.Files, goodItems, feedback);
@@ -143,6 +150,7 @@
 		public static readonly TestFile BigFile = new TestFile("BigFile", 82875904);
 		public static readonly TestFile MediumFile = new TestFile("MediumFile", 3143255);
 		public static readonly TestFile SmallFile = new TestFile("SmallFile", 38);
+		public static readonly TestFile EmptyFile = new TestFile("EmptyFile", 0);
 
 		private const string Filename = "MegaAccounts.json";
 
@@ -216,7 +224,7 @@
 			public CloudItem TryFind(FilesystemSnapshot filesystem)
 			{
 				return filesystem.AllItems
-					.FirstOrDefault(ci => ci.Type == ItemType.File && ci.Name == Name && ci.Size == Size);
+					.FirstOrDefault(ci => ci.Type == ItemType.File && ci.Name == Name && ci.Size.GetValueOrDefault() == Size);
 			}
 
 			/// <summary>

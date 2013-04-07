@@ -303,8 +303,7 @@
 		}
 
 		[TestMethod]
-		[ExpectedException(typeof(InvalidOperationException))]
-		public async Task DownloadingEmptyFile_DoesNotWork()
+		public async Task DownloadingEmptyFile_SeemsToWork()
 		{
 			using (var feedback = new DebugFeedbackChannel("Test"))
 			{
@@ -323,6 +322,8 @@
 				try
 				{
 					await file.DownloadContentsAsync(target, feedback);
+
+					Assert.AreEqual(0, new FileInfo(target).Length);
 				}
 				finally
 				{

@@ -34,10 +34,11 @@ GOOD:
 * Send files/folders to contact.
 
 BAD:
-* Share functionality.
+* Share usage functionality.
 
 NONE:
 
+* Share management functionality.
 * User registration.
 * Share URL creation.
 

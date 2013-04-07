@@ -142,174 +142,180 @@
 		{
 			Argument.ValidateIsNotNullOrWhitespace(destinationPath, "destinationPath");
 
-			if (Type != ItemType.File || !HasContents)
-				throw new InvalidOperationException("You can only download files that have contents.");
+			if (Type != ItemType.File)
+				throw new InvalidOperationException("You can only download files.");
 
 			PatternHelper.LogMethodCall("DownloadContentsAsync", feedbackChannel, cancellationToken);
 			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
 
 			using (var file = File.Create(destinationPath))
-			using (await _client.AcquireLock(feedbackChannel, cancellationToken))
 			{
-				feedbackChannel.Status = "Requesting download URL";
+				// If this file does not have any contents, there is nothing to download :)
+				if (!HasContents)
+					return;
 
-				var result = await _client.ExecuteCommandInternalAsync<GetDownloadLinkResult>(feedbackChannel, cancellationToken, new GetDownloadCommand
+				using (await _client.AcquireLock(feedbackChannel, cancellationToken))
 				{
-					ItemID = ID
-				});
+					feedbackChannel.Status = "Requesting download URL";
 
-				feedbackChannel.Status = "Preparing for download";
-
-				var itemKey = _client.DecryptItemKey(EncryptedKeys);
-				var dataKey = Algorithms.DeriveNodeDataKey(itemKey);
-				var nonce = itemKey.Skip(16).Take(8).ToArray();
-				var metaMac = itemKey.Skip(24).Take(8).ToArray();
-
-				feedbackChannel.Status = "Pre-allocating file";
-
-				file.SetLength(result.Size);
-
-				feedbackChannel.Status = "Downloading";
-
-				var chunkSizes = Algorithms.MeasureChunks(result.Size);
-				var chunkCount = chunkSizes.Length;
-
-				var chunkMacs = new byte[chunkCount][];
-
-				// Limit number of chunks in flight at the same time.
-				var concurrentDownloadSemaphore = new SemaphoreSlim(4);
-
-				// Only one file write operation can take place at a time.
-				var concurrentWriteSemaphore = new SemaphoreSlim(1);
-
-				// For progress calculations.
-				long completedBytes = 0;
-
-				CancellationTokenSource chunkDownloadsCancellationSource = new CancellationTokenSource();
-
-				// Get chunks in parallel.
-				List<Task> chunkDownloads = new List<Task>();
-				for (int i = 0; i < chunkCount; i++)
-				{
-					int chunkIndex = i;
-					long startOffset = chunkSizes.Take(i).Select(size => (long)size).Sum();
-					long endOffset = startOffset + chunkSizes[i];
-
-					// Each chunk is downloaded and processed by this separately.
-					chunkDownloads.Add(Task.Run(async delegate
+					var result = await _client.ExecuteCommandInternalAsync<GetDownloadLinkResult>(feedbackChannel, cancellationToken, new GetDownloadCommand
 					{
-						var operationName = string.Format("Downloading chunk {0} of {1}", chunkIndex + 1, chunkSizes.Length);
-						using (var chunkFeedbackChannel = feedbackChannel.BeginSubOperation(operationName))
-						{
-							byte[] bytes = null;
+						ItemID = ID
+					});
 
-							using (await SemaphoreLock.TakeAsync(concurrentDownloadSemaphore))
+					feedbackChannel.Status = "Preparing for download";
+
+					var itemKey = _client.DecryptItemKey(EncryptedKeys);
+					var dataKey = Algorithms.DeriveNodeDataKey(itemKey);
+					var nonce = itemKey.Skip(16).Take(8).ToArray();
+					var metaMac = itemKey.Skip(24).Take(8).ToArray();
+
+					feedbackChannel.Status = "Pre-allocating file";
+
+					file.SetLength(result.Size);
+
+					feedbackChannel.Status = "Downloading";
+
+					var chunkSizes = Algorithms.MeasureChunks(result.Size);
+					var chunkCount = chunkSizes.Length;
+
+					var chunkMacs = new byte[chunkCount][];
+
+					// Limit number of chunks in flight at the same time.
+					var concurrentDownloadSemaphore = new SemaphoreSlim(4);
+
+					// Only one file write operation can take place at a time.
+					var concurrentWriteSemaphore = new SemaphoreSlim(1);
+
+					// For progress calculations.
+					long completedBytes = 0;
+
+					CancellationTokenSource chunkDownloadsCancellationSource = new CancellationTokenSource();
+
+					// Get chunks in parallel.
+					List<Task> chunkDownloads = new List<Task>();
+					for (int i = 0; i < chunkCount; i++)
+					{
+						int chunkIndex = i;
+						long startOffset = chunkSizes.Take(i).Select(size => (long)size).Sum();
+						long endOffset = startOffset + chunkSizes[i];
+
+						// Each chunk is downloaded and processed by this separately.
+						chunkDownloads.Add(Task.Run(async delegate
+						{
+							var operationName = string.Format("Downloading chunk {0} of {1}", chunkIndex + 1, chunkSizes.Length);
+							using (var chunkFeedbackChannel = feedbackChannel.BeginSubOperation(operationName))
 							{
-								await RetryHelper.ExecuteWithRetryAsync(async delegate
+								byte[] bytes = null;
+
+								using (await SemaphoreLock.TakeAsync(concurrentDownloadSemaphore))
 								{
-									chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
+									await RetryHelper.ExecuteWithRetryAsync(async delegate
+									{
+										chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
 
-									chunkFeedbackChannel.Status = string.Format("Downloading {0} bytes", chunkSizes[chunkIndex]);
+										chunkFeedbackChannel.Status = string.Format("Downloading {0} bytes", chunkSizes[chunkIndex]);
 
-									// Range is inclusive, so do -1 for the end offset.
-									var url = result.DownloadUrl + "/" + startOffset + "-" + (endOffset - 1);
+										// Range is inclusive, so do -1 for the end offset.
+										var url = result.DownloadUrl + "/" + startOffset + "-" + (endOffset - 1);
 
-									HttpResponseMessage response;
-									using (var client = new HttpClient())
-										response = await client.GetAsyncCancellationSafe(url, chunkDownloadsCancellationSource.Token);
+										HttpResponseMessage response;
+										using (var client = new HttpClient())
+											response = await client.GetAsyncCancellationSafe(url, chunkDownloadsCancellationSource.Token);
 
-									response.EnsureSuccessStatusCode();
+										response.EnsureSuccessStatusCode();
 
-									bytes = await response.Content.ReadAsByteArrayAsync();
+										bytes = await response.Content.ReadAsByteArrayAsync();
 
-									if (bytes.Length != chunkSizes[chunkIndex])
-										throw new MegaException(string.Format("Expected {0} bytes in chunk but got {1}.", chunkSizes[chunkIndex], bytes.Length));
-								}, ChunkDownloadRetryPolicy, chunkFeedbackChannel, chunkDownloadsCancellationSource.Token);
+										if (bytes.Length != chunkSizes[chunkIndex])
+											throw new MegaException(string.Format("Expected {0} bytes in chunk but got {1}.", chunkSizes[chunkIndex], bytes.Length));
+									}, ChunkDownloadRetryPolicy, chunkFeedbackChannel, chunkDownloadsCancellationSource.Token);
+								}
+
+								chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
+
+								// OK, got the bytes. Now decrypt them and calculate MAC.
+								chunkFeedbackChannel.Status = "Decrypting";
+
+								byte[] chunkMac;
+								Algorithms.DecryptNodeDataChunk(bytes, dataKey, nonce, out chunkMac, startOffset);
+								chunkMacs[chunkIndex] = chunkMac;
+
+								chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
+
+								// Now write to file.
+								chunkFeedbackChannel.Status = "Writing to file";
+
+								using (await SemaphoreLock.TakeAsync(concurrentWriteSemaphore))
+								{
+									file.Position = startOffset;
+									file.Write(bytes, 0, bytes.Length);
+									file.Flush(true);
+								}
+
+								Interlocked.Add(ref completedBytes, chunkSizes[chunkIndex]);
 							}
-
-							chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
-
-							// OK, got the bytes. Now decrypt them and calculate MAC.
-							chunkFeedbackChannel.Status = "Decrypting";
-
-							byte[] chunkMac;
-							Algorithms.DecryptNodeDataChunk(bytes, dataKey, nonce, out chunkMac, startOffset);
-							chunkMacs[chunkIndex] = chunkMac;
-
-							chunkDownloadsCancellationSource.Token.ThrowIfCancellationRequested();
-
-							// Now write to file.
-							chunkFeedbackChannel.Status = "Writing to file";
-
-							using (await SemaphoreLock.TakeAsync(concurrentWriteSemaphore))
-							{
-								file.Position = startOffset;
-								file.Write(bytes, 0, bytes.Length);
-								file.Flush(true);
-							}
-
-							Interlocked.Add(ref completedBytes, chunkSizes[chunkIndex]);
-						}
-					}, chunkDownloadsCancellationSource.Token));
-				}
-
-				// Wait for all tasks to finish. Stop immediately on cancel or if any single task fails.
-				while (chunkDownloads.Any(d => !d.IsCompleted))
-				{
-					feedbackChannel.Progress = Interlocked.Read(ref completedBytes) * 1.0 / result.Size;
-
-					Exception failureReason = null;
-
-					if (cancellationToken.IsCancellationRequested)
-					{
-						failureReason = new OperationCanceledException();
+						}, chunkDownloadsCancellationSource.Token));
 					}
-					else
-					{
-						var failedTask = chunkDownloads.FirstOrDefault(d => d.IsFaulted || d.IsCanceled);
 
-						if (failedTask != null)
+					// Wait for all tasks to finish. Stop immediately on cancel or if any single task fails.
+					while (chunkDownloads.Any(d => !d.IsCompleted))
+					{
+						feedbackChannel.Progress = Interlocked.Read(ref completedBytes) * 1.0 / result.Size;
+
+						Exception failureReason = null;
+
+						if (cancellationToken.IsCancellationRequested)
 						{
-							if (failedTask.Exception != null)
-								failureReason = failedTask.Exception.GetBaseException();
-							else
-								failureReason = new MegaException("The file could not be downloaded.");
+							failureReason = new OperationCanceledException();
 						}
+						else
+						{
+							var failedTask = chunkDownloads.FirstOrDefault(d => d.IsFaulted || d.IsCanceled);
+
+							if (failedTask != null)
+							{
+								if (failedTask.Exception != null)
+									failureReason = failedTask.Exception.GetBaseException();
+								else
+									failureReason = new MegaException("The file could not be downloaded.");
+							}
+						}
+
+						if (failureReason == null)
+						{
+							await Task.Delay(1000);
+							continue;
+						}
+
+						chunkDownloadsCancellationSource.Cancel();
+
+						feedbackChannel.Status = "Stopping download due to subtask failure";
+
+						try
+						{
+							// Wait for all of the tasks to complete, just so we do not leave any dangling activities in the background.
+							Task.WaitAll(chunkDownloads.ToArray());
+						}
+						catch
+						{
+							// It will throw something no notify us of the cancellation. Whatever, do not care.
+						}
+
+						// Rethrow the failure causing exception.
+						ExceptionDispatchInfo.Capture(failureReason).Throw();
 					}
 
-					if (failureReason == null)
-					{
-						await Task.Delay(1000);
-						continue;
-					}
+					feedbackChannel.Progress = 1;
 
-					chunkDownloadsCancellationSource.Cancel();
+					feedbackChannel.Status = "Verifying file";
 
-					feedbackChannel.Status = "Stopping download due to subtask failure";
+					// Verify meta-MAC.
+					byte[] calculatedMetaMac = Algorithms.CalculateMetaMac(chunkMacs, dataKey);
 
-					try
-					{
-						// Wait for all of the tasks to complete, just so we do not leave any dangling activities in the background.
-						Task.WaitAll(chunkDownloads.ToArray());
-					}
-					catch
-					{
-						// It will throw something no notify us of the cancellation. Whatever, do not care.
-					}
-
-					// Rethrow the failure causing exception.
-					ExceptionDispatchInfo.Capture(failureReason).Throw();
+					if (!metaMac.SequenceEqual(calculatedMetaMac))
+						throw new DataIntegrityException("File meta-MAC did not match expected value. File may have been corrupted during download.");
 				}
-
-				feedbackChannel.Progress = 1;
-
-				feedbackChannel.Status = "Verifying file";
-
-				// Verify meta-MAC.
-				byte[] calculatedMetaMac = Algorithms.CalculateMetaMac(chunkMacs, dataKey);
-
-				if (!metaMac.SequenceEqual(calculatedMetaMac))
-					throw new DataIntegrityException("File meta-MAC did not match expected value. File may have been corrupted during download.");
 			}
 		}
 		#endregion
@@ -753,6 +759,8 @@
 						newItem.ParentItemContentsReference = item.Parent.ID.BinaryData;
 
 					newItems.Add(newItem);
+
+					feedbackChannel.WriteVerbose("Sending to contact: {0}", item.Name);
 				}
 
 				await _client.ExecuteCommandInternalAsync<NewItemsResult>(feedbackChannel, cancellationToken, new NewItemsCommand
