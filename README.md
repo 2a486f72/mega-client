@@ -3,7 +3,7 @@ mega-client
 
 .NET 4.5 and Windows Store client library for the Mega API.
 
-**Does not work - file I/O is not supported in Portable Library, so this will wait until it becomes a priority **
+**Does not work - file I/O is not supported in Portable Library, so this will wait until it becomes a priority**
 
 
 The library consists of two layers:
