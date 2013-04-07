@@ -113,10 +113,10 @@
 				await item.DeleteAsync(feedback);
 
 			// Delete all contacts.
-			foreach (var contact in await client1.GetContactListAsync(feedback))
+			foreach (var contact in await client1.GetContactListSnapshotAsync(feedback))
 				await contact.RemoveAsync(feedback);
 
-			foreach (var contact in await client2.GetContactListAsync(feedback))
+			foreach (var contact in await client2.GetContactListSnapshotAsync(feedback))
 				await contact.RemoveAsync(feedback);
 
 			// Add account 1 as contact to account 2.

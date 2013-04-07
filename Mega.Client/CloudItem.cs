@@ -100,6 +100,24 @@
 		public ItemAttributes Attributes { get; private set; }
 		#endregion
 
+		#region Hierarchy operations
+		/// <summary>
+		/// Gets all the descendants of the current item.
+		/// </summary>
+		public ICollection<CloudItem> GetDescendants()
+		{
+			var descendants = new List<CloudItem>();
+
+			foreach (var child in Children)
+			{
+				descendants.Add(child);
+				descendants.AddRange(child.GetDescendants());
+			}
+
+			return descendants;
+		}
+		#endregion
+
 		#region Download
 		/// <summary>
 		/// Downloads the contents of the item to the local filesystem. This operation is only valid for files.
@@ -560,7 +578,7 @@
 							}.SerializeAndEncrypt(attributesKey),
 							Type = KnownItemTypes.File,
 							EncryptedItemKey = Algorithms.EncryptKey(itemKey, _client._masterKey),
-							UploadCompletionToken = completionToken.Value
+							ItemContentsReference = completionToken.Value
 						}
 					}
 				});
@@ -637,6 +655,11 @@
 				{
 					// Already deleted? Oh happy days!
 				}
+				catch (AccessDeniedException)
+				{
+					// Also happens sometimes when the item has already been deleted.
+					// This has happened if you delete a parent immediately before deleting the child.
+				}
 
 				_client.InvalidateFilesystemInternal();
 			}
@@ -671,6 +694,69 @@
 				});
 
 				_client.InvalidateFilesystemInternal();
+			}
+		}
+		#endregion
+
+		#region Send to contact
+		/// <summary>
+		/// Sends the item to a contact's Inbox folder. If the item is a folder, the items are sent recursively.
+		/// </summary>
+		/// <param name="contact">Recipient of the item.</param>
+		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
+		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
+		public async Task SendToContactAsync(Contact contact, IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			Argument.ValidateIsNotNull(contact, "contact");
+
+			if (Type != ItemType.File && Type != ItemType.Folder)
+				throw new InvalidOperationException("You can only send files or folders.");
+
+			PatternHelper.LogMethodCall("SendToContactAsync", feedbackChannel, cancellationToken);
+			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
+
+			var itemsToSend = GetDescendants();
+			itemsToSend.Add(this);
+
+			using (await _client.AcquireLock(feedbackChannel, cancellationToken))
+			{
+				GetAccountPublicKeyResult contactKey;
+
+				using (var keyLoadFeedback = feedbackChannel.BeginSubOperation("Loading contact's public key"))
+					contactKey = await _client.ExecuteCommandInternalAsync<GetAccountPublicKeyResult>(keyLoadFeedback, cancellationToken, new GetAccountPublicKeyCommand
+				{
+					AccountID = contact.ID
+				});
+
+				var contactPublicKey = Algorithms.MpiArrayBytesToRsaPublicKey(contactKey.PublicKey);
+
+				var newItems = new List<NewItemsCommand.NewItem>();
+
+				foreach (var item in itemsToSend)
+				{
+					var itemKey = _client.TryDecryptItemKey(item.EncryptedKeys);
+
+					if (itemKey == null)
+						throw new ContractException("We somehow lost the key for item " + item.Name);
+
+					var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
+					var contactEncryptedKey = Algorithms.RsaEncrypt(itemKey, contactPublicKey);
+
+					newItems.Add(new NewItemsCommand.NewItem
+					{
+						ItemContentsReference = item.ID.BinaryData,
+						Type = item.TypeID,
+						EncryptedItemKey = contactEncryptedKey,
+						Attributes = item.Attributes.SerializeAndEncrypt(attributesKey)
+					});
+				}
+
+				await _client.ExecuteCommandInternalAsync<NewItemsResult>(feedbackChannel, cancellationToken, new NewItemsCommand
+				{
+					ClientInstanceID = _client._clientInstanceID,
+					ParentID = contact.ID,
+					Items = newItems.ToArray()
+				});
 			}
 		}
 		#endregion

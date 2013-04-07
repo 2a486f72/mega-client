@@ -11,7 +11,7 @@
 			var passwordKey = Algorithms.DeriveAesKey("creation");
 			var encryptedKey = Algorithms.Base64Decode("aXaYqXimDxtnOx2OunCXgg");
 
-			var key = Algorithms.DecryptKey(encryptedKey, passwordKey);
+			var key = Algorithms.AesDecryptKey(encryptedKey, passwordKey);
 
 			var a32 = Algorithms.BytesToA32(key);
 
@@ -27,11 +27,11 @@
 			var passwordKey = Algorithms.DeriveAesKey("creation");
 			var encryptedMasterKey = Algorithms.Base64Decode("aXaYqXimDxtnOx2OunCXgg");
 
-			var masterKey = Algorithms.DecryptKey(encryptedMasterKey, passwordKey);
+			var masterKey = Algorithms.AesDecryptKey(encryptedMasterKey, passwordKey);
 
 			var encryptedRsaKey = Algorithms.Base64Decode("3Y1jUdtxUHgx9tK2eslnoSIORipVFHMainkCIWH6fRFFcb6Z8KC_ipK9Jeebs5u7saBbDDUR6atag2BBP3LIzLEvEHAVmjgAZaKbX0dfZKVI4wkGAmM4-8s3z9ke_EIveslG41TvPygAK-seHYfkptkp-1eZdVrZmdqlumagqcZDksB24vr0CrD7hYD9HSKOPTjFSEFXyoK10N9iB1DBqNhw-2cVLqysUf4FTMyG1Ewe7fMvKkJdes2lU2mQue_5qxj890M2Lhq-5SS_rUqaWLkCOnWTaLqsCARB09yshyqCwA2eNecNhO12nB28D5hTIabjYUmvQAZvodrTSKCozvBTcDBiMFukBITtwl-lpRBUD5GUQ-T2oP-ozyEySWUzFh0_h2xKUVvwmAoH44VZ63dwUETeP0TMfoJigJcmLKaSwE1m9ur3x0iVC3asYo-qGG9f8Xqm8_aclcGzGQ8gid2vy5kpQrAk50L1m1PnvWV3t_Bqq8ovWfGybWVFaoPykHkPf2fbJACeAHtq1kKbvCh1P8LPEWpdcM6I6wisw_UD1EwxBuzMSo0JPqEHMsYKoRy42muRv8X81_OYRkVVCEfQaoRneBBCQismhhduCRRw_aErVZl2fxBQJ66yUDCpYz2Pix_Qpk9CuN_tIW0GoTIlDXM-Xg3Ew9BGrhkrWz283ZRMGZ9xiPNCOjNkWGZJ25d-HirmLfWj_z2kg12Ix7uK7ZOsOU5v0zTcnc1YfriXO7ljZHchoToU_XK1I-Lqi2H2nRqwxKk1wEePz_nPDveU_0oy-HWxoGOnUptNyb0rpYb_zZ0wfyfcXR_a_b9omOBaFEdoz5G5B2jdXqjYXKYYd4MV3kFgQAQBkQIficc");
 
-			var rsaKey = Algorithms.DecryptKey(encryptedRsaKey, masterKey);
+			var rsaKey = Algorithms.AesDecryptKey(encryptedRsaKey, masterKey);
 
 			var a32 = Algorithms.BytesToA32(rsaKey);
 

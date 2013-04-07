@@ -57,9 +57,9 @@
 		/// </summary>
 		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
 		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
-		public async Task<IImmutableSet<Contact>> GetContactListAsync(IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<IImmutableSet<Contact>> GetContactListSnapshotAsync(IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
 		{
-			PatternHelper.LogMethodCall("GetContactListAsync", feedbackChannel, cancellationToken);
+			PatternHelper.LogMethodCall("GetContactListSnapshotAsync", feedbackChannel, cancellationToken);
 			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
 
 			using (await AcquireLock(feedbackChannel, cancellationToken))
@@ -178,14 +178,32 @@
 		{
 			Argument.ValidateIsNotNull(itemKeys, "itemKeys");
 
-			var key = itemKeys.FirstOrDefault(itemKey => _masterKeys.ContainsKey(itemKey.SourceID));
+			foreach (var candidateKey in itemKeys)
+			{
+				// First, determine if we need to AES-decrypt of RSA-decrypt.
+				if (candidateKey.EncryptedKey.Bytes.Length == 16 || candidateKey.EncryptedKey.Bytes.Length == 32)
+				{
+					// AES.
+					if (!_masterKeys.ContainsKey(candidateKey.SourceID))
+						continue;
 
-			if (key == default(EncryptedItemKey))
-				return null;
+					var masterKey = _masterKeys[candidateKey.SourceID];
 
-			var masterKey = _masterKeys[key.SourceID];
+					return Algorithms.AesDecryptKey(candidateKey.EncryptedKey, masterKey);
+				}
+				else
+				{
+					// RSA.
+					if (candidateKey.SourceID != AccountID)
+						continue;
 
-			return Algorithms.DecryptKey(key.EncryptedKey, masterKey);
+					// TODO: Support more than just this account's key.
+
+					return Algorithms.RsaDecrypt(candidateKey.EncryptedKey, _privateKey);
+				}
+			}
+
+			return null;
 		}
 
 		#region Connection and session management
@@ -283,9 +301,9 @@
 				// Now do the cryptography we need to get the session ID and load the profile.
 				connecting.Status = "Loading user profile";
 
-				_masterKey = Algorithms.DecryptKey(sessionInfo.MasterKey, _passwordKey);
+				_masterKey = Algorithms.AesDecryptKey(sessionInfo.MasterKey, _passwordKey);
 
-				var privateKeyComponents = Algorithms.DecryptKey(sessionInfo.PrivateKeyComponents, _masterKey);
+				var privateKeyComponents = Algorithms.AesDecryptKey(sessionInfo.PrivateKeyComponents, _masterKey);
 				_privateKey = Algorithms.MpiArrayBytesToRsaPrivateKey(privateKeyComponents);
 
 				var sessionIDEncrypted = Algorithms.MpiToBytes(sessionInfo.SessionIDData);

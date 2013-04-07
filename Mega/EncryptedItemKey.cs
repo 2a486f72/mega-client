@@ -5,6 +5,10 @@
 	/// <summary>
 	/// A key used to protect the data of a node, together with the ID of whatever provided the key.
 	/// Keys can be user keys or share keys - the SourceID will point to the user or share the key is from.
+	/// 
+	/// 16 byte key is folder AES key, encrypted with source AES key.
+	/// 32 byte key is file AES key, encrypted with source AES key.
+	/// Bigger key is either AES key, encrypted with source RSA public key.
 	/// </summary>
 	public struct EncryptedItemKey : IEquatable<EncryptedItemKey>
 	{

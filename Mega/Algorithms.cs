@@ -322,7 +322,7 @@
 		/// <summary>
 		/// Decrypts an encrypted key. This could be either an AES key or an RSA key or really any piece of data.
 		/// </summary>
-		public static byte[] DecryptKey(byte[] encryptedKey, byte[] aesKey)
+		public static byte[] AesDecryptKey(byte[] encryptedKey, byte[] aesKey)
 		{
 			Argument.ValidateIsNotNull(encryptedKey, "encryptedKey");
 			Argument.ValidateIsNotNull(aesKey, "aesKey");

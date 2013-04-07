@@ -10,6 +10,9 @@
 		[JsonProperty("i")]
 		public OpaqueID ClientInstanceID { get; set; }
 
+		/// <summary>
+		/// Either a local container item or an account ID (if sending file to account).
+		/// </summary>
 		[JsonProperty("t")]
 		public OpaqueID ParentID { get; set; }
 
@@ -33,7 +36,9 @@
 			public Base64Data Attributes { get; set; }
 
 			/// <summary>
-			/// The item key of the current user, encrypted with the user's master key.
+			/// The item key of the account that the file is located under, encrypted with the account's master key.
+			/// If this is a file in your own cloud filesystem, this is encrypted with your own master key.
+			/// If this is a file in some other account's cloud filesystem, this is encrypted with the account public key.
 			/// </summary>
 			[JsonProperty("k")]
 			public Base64Data EncryptedItemKey { get; set; }
@@ -45,14 +50,15 @@
 			public int Type { get; set; }
 
 			/// <summary>
-			/// Completion token from upload process or dummy constant for folders (FolderUploadCompletionToken).
+			/// Completion token from upload process or dummy constant for folders (FolderUploadCompletionToken)
+			/// or source node ID for local content being shared to other accounts.
 			/// </summary>
 			[JsonProperty("h")]
-			public Base64Data UploadCompletionToken { get; set; }
+			public Base64Data ItemContentsReference { get; set; }
 
 			public NewItem()
 			{
-				UploadCompletionToken = FolderUploadCompletionToken;
+				ItemContentsReference = FolderUploadCompletionToken;
 			}
 		}
 	}

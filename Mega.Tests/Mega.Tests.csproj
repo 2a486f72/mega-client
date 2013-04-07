@@ -91,6 +91,7 @@
     <Compile Include="Algorithm\StringhashTests.cs" />
     <Compile Include="Algorithm\StringTests.cs" />
     <Compile Include="Client\SanityTests.cs" />
+    <Compile Include="Client\SendFileTests.cs" />
     <Compile Include="TestData.cs" />
     <Compile Include="TestHelper.cs" />
     <Compile Include="Api\TransactionTests.cs" />

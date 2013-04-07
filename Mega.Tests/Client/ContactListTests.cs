@@ -20,7 +20,7 @@
 
 				await client.AddContactAsync(TestData.Current.Email2, feedback);
 
-				var contactList = await client.GetContactListAsync(feedback);
+				var contactList = await client.GetContactListSnapshotAsync(feedback);
 
 				Assert.AreEqual(1, contactList.Count);
 				Assert.AreEqual(TestData.Current.Email2, contactList.Single().Email);
@@ -37,12 +37,12 @@
 
 				var client = new MegaClient(TestData.Current.Email2, TestData.Current.Password2);
 
-				var contactList = await client.GetContactListAsync(feedback);
+				var contactList = await client.GetContactListSnapshotAsync(feedback);
 				Assert.AreEqual(1, contactList.Count);
 
 				await contactList.Single().RemoveAsync(feedback);
 
-				contactList = await client.GetContactListAsync(feedback);
+				contactList = await client.GetContactListSnapshotAsync(feedback);
 				Assert.AreEqual(0, contactList.Count);
 			}
 		}
@@ -60,7 +60,7 @@
 				await client.AddContactAsync(TestData.Current.Email2, feedback);
 				await client.AddContactAsync(TestData.Current.Email2, feedback);
 
-				var contactList = await client.GetContactListAsync(feedback);
+				var contactList = await client.GetContactListSnapshotAsync(feedback);
 
 				Assert.AreEqual(1, contactList.Count);
 				Assert.AreEqual(TestData.Current.Email2, contactList.Single().Email);
@@ -77,13 +77,13 @@
 
 				var client = new MegaClient(TestData.Current.Email2, TestData.Current.Password2);
 
-				var contactList = await client.GetContactListAsync(feedback);
+				var contactList = await client.GetContactListSnapshotAsync(feedback);
 				Assert.AreEqual(1, contactList.Count);
 
 				await contactList.Single().RemoveAsync(feedback);
 				await contactList.Single().RemoveAsync(feedback);
 
-				contactList = await client.GetContactListAsync(feedback);
+				contactList = await client.GetContactListSnapshotAsync(feedback);
 				Assert.AreEqual(0, contactList.Count);
 			}
 		}

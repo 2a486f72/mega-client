@@ -55,7 +55,7 @@
 
 				var client = new MegaClient(TestData.Current.Email1, TestData.Current.Password1);
 				await client.EnsureConnectedAsync(feedback);
-				await client.GetContactListAsync(feedback);
+				await client.GetContactListSnapshotAsync(feedback);
 			}
 		}
 	}
