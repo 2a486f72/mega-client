@@ -83,19 +83,19 @@
 			var emptyFile = EmptyFile.TryFind(filesystem1);
 
 			// Then upload the new files.
-			if (emptyFile == null)
+			if (emptyFile == null || emptyFile.Parent != folder2)
 				using (var stream = OpenTestDataFile(EmptyFile.Name))
 					emptyFile = await folder2.NewFileAsync(EmptyFile.Name, stream, feedback);
 
-			if (smallFile == null)
+			if (smallFile == null || smallFile.Parent != folder1)
 				using (var stream = OpenTestDataFile(SmallFile.Name))
 					smallFile = await folder1.NewFileAsync(SmallFile.Name, stream, feedback);
 
-			if (mediumFile == null)
+			if (mediumFile == null || mediumFile.Parent != filesystem1.Files)
 				using (var stream = OpenTestDataFile(MediumFile.Name))
 					mediumFile = await filesystem1.Files.NewFileAsync(MediumFile.Name, stream, feedback);
 
-			if (bigFile == null)
+			if (bigFile == null || bigFile.Parent != filesystem1.Files)
 				using (var stream = OpenTestDataFile(BigFile.Name))
 					bigFile = await filesystem1.Files.NewFileAsync(BigFile.Name, stream, feedback);
 
