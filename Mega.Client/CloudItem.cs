@@ -742,13 +742,19 @@
 					var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
 					var contactEncryptedKey = Algorithms.RsaEncrypt(itemKey, contactPublicKey);
 
-					newItems.Add(new NewItemsCommand.NewItem
+					var newItem = new NewItemsCommand.NewItem
 					{
 						ItemContentsReference = item.ID.BinaryData,
 						Type = item.TypeID,
 						EncryptedItemKey = contactEncryptedKey,
 						Attributes = item.Attributes.SerializeAndEncrypt(attributesKey)
-					});
+					};
+
+					// If this is not the current item, mark its parent reference, to preserve hierarchy.
+					if (item != this)
+						newItem.ParentItemContentsReference = item.Parent.ID.BinaryData;
+
+					newItems.Add(newItem);
 				}
 
 				await _client.ExecuteCommandInternalAsync<NewItemsResult>(feedbackChannel, cancellationToken, new NewItemsCommand

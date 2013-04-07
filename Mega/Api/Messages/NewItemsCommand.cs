@@ -56,6 +56,12 @@
 			[JsonProperty("h")]
 			public Base64Data ItemContentsReference { get; set; }
 
+			/// <summary>
+			/// Parent ID (references another item's contents reference in the same set, to create a hierarchy).
+			/// </summary>
+			[JsonProperty("p")]
+			public Base64Data? ParentItemContentsReference { get; set; }
+
 			public NewItem()
 			{
 				ItemContentsReference = FolderUploadCompletionToken;
