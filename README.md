@@ -1,9 +1,10 @@
 mega-client
 ===========
 
-.NET 4.5 client library for the Mega API.
+.NET 4.5 and Windows Store client library for the Mega API.
 
-**Available as a NuGet package: 2a486f72.Mega**
+**Does not work - file I/O is not supported in Portable Library, so this will wait until it becomes a priority **
+
 
 The library consists of two layers:
 
