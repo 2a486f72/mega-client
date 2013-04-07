@@ -3,3 +3,4 @@
 * Understand share access rights and ownership.
 * Create and manage shares.
 * Tests for share functionality.
+* Support contentless and 0-byte files.
