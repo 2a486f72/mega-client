@@ -22,7 +22,7 @@
 	{
 		#region Read-only data
 		public OpaqueID ID { get; private set; }
-		public OpaqueID? ParentID { get; private set; }
+		public OpaqueID? ParentID { get; internal set; }
 		public OpaqueID OwnerID { get; private set; }
 
 		public CloudItem Parent { get; internal set; }
@@ -51,10 +51,10 @@
 			get { return Type != ItemType.File; }
 		}
 
-		public EncryptedItemKey MyEncryptedItemKey
-		{
-			get { return EncryptedKeys.FirstOrDefault(k => k.SourceID == _client.AccountID); }
-		}
+		/// <summary>
+		/// Gets whether the item is the root of a share that has been made available by a contact.
+		/// </summary>
+		public bool IsShareRoot { get; private set; }
 		#endregion
 
 		#region Modifiable data
@@ -348,7 +348,7 @@
 								{ "n", name }
 							}.SerializeAndEncrypt(attributesKey),
 							Type = KnownItemTypes.Folder,
-							EncryptedItemKey = Algorithms.EncryptKey(itemKey, _client._masterKey)
+							EncryptedItemKey = Algorithms.EncryptKey(itemKey, _client.AesKey)
 						}
 					}
 				});
@@ -577,7 +577,7 @@
 								{ "n", name }
 							}.SerializeAndEncrypt(attributesKey),
 							Type = KnownItemTypes.File,
-							EncryptedItemKey = Algorithms.EncryptKey(itemKey, _client._masterKey),
+							EncryptedItemKey = Algorithms.EncryptKey(itemKey, _client.AesKey),
 							ItemContentsReference = completionToken.Value
 						}
 					}
@@ -685,11 +685,14 @@
 				var itemKey = _client.TryDecryptItemKey(EncryptedKeys);
 				var attributesKey = Algorithms.DeriveNodeAttributesKey(itemKey);
 
+				// Encrypt the item with the current account's AES key.
+				var encryptedKey = Algorithms.EncryptKey(itemKey, _client.AesKey);
+
 				await _client.ExecuteCommandInternalAsync<SuccessResult>(feedbackChannel, cancellationToken, new SetItemAttributesCommand
 				{
 					ClientInstanceID = _client._clientInstanceID,
 					ItemID = ID,
-					EncryptedItemKey = MyEncryptedItemKey.EncryptedKey,
+					EncryptedItemKey = encryptedKey,
 					Attributes = Attributes.SerializeAndEncrypt(attributesKey)
 				});
 
@@ -720,15 +723,7 @@
 
 			using (await _client.AcquireLock(feedbackChannel, cancellationToken))
 			{
-				GetAccountPublicKeyResult contactKey;
-
-				using (var keyLoadFeedback = feedbackChannel.BeginSubOperation("Loading contact's public key"))
-					contactKey = await _client.ExecuteCommandInternalAsync<GetAccountPublicKeyResult>(keyLoadFeedback, cancellationToken, new GetAccountPublicKeyCommand
-				{
-					AccountID = contact.ID
-				});
-
-				var contactPublicKey = Algorithms.MpiArrayBytesToRsaPublicKey(contactKey.PublicKey);
+				var contactPublicKey = await _client.GetAccountPublicKeyInternalAsync(contact.ID, feedbackChannel, cancellationToken);
 
 				var newItems = new List<NewItemsCommand.NewItem>();
 
@@ -785,7 +780,8 @@
 				OwnerID = template.OwnerID,
 				LastUpdated = new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero).AddSeconds(template.Timestamp).ToLocalTime(),
 				ParentID = template.ParentID,
-				EncryptedKeys = template.EncryptedKeys.ToImmutableHashSet()
+				EncryptedKeys = template.EncryptedKeys.ToImmutableHashSet(),
+				IsShareRoot = template.ShareKey.HasValue
 			};
 
 			bool hasEncryptedData = true;

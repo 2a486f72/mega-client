@@ -44,7 +44,7 @@
 
 			using (await AcquireLock(feedbackChannel, cancellationToken))
 			{
-				await EnsureFilesystemAndContactlistAvailableAsync(feedbackChannel, cancellationToken);
+				await EnsureFilesystemAndContactlistAvailableInternalAsync(feedbackChannel, cancellationToken);
 
 				return _currentFilesystemSnapshot;
 			}
@@ -52,7 +52,7 @@
 
 		/// <summary>
 		/// Gets a snapshot of the contact list's current state. You can use this snapshot to operate with
-		/// contacts (e.g. create shares for them). The snapshot itself is not kept up to date
+		/// contacts (e.g. send files to them). The snapshot itself is not kept up to date
 		/// by the client, so you should get a new snapshot after performing operations on it.
 		/// </summary>
 		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
@@ -64,7 +64,7 @@
 
 			using (await AcquireLock(feedbackChannel, cancellationToken))
 			{
-				await EnsureFilesystemAndContactlistAvailableAsync(feedbackChannel, cancellationToken);
+				await EnsureFilesystemAndContactlistAvailableInternalAsync(feedbackChannel, cancellationToken);
 
 				return _currentContactListSnapshot;
 			}
@@ -148,15 +148,99 @@
 		}
 
 		#region Implementation details
+		#region Key management
+		/// <summary>
+		/// Password key of the current account.
+		/// </summary>
 		private readonly byte[] _passwordKey;
-		internal byte[] _masterKey;
-		private Algorithms.RsaPrivateKey _privateKey;
-		private Algorithms.RsaPublicKey _publicKey;
 
 		/// <summary>
-		/// Known user or share keys. These are primarily used to decrypt item keys.
+		/// Private key of the current account.
 		/// </summary>
-		private readonly IDictionary<OpaqueID, byte[]> _masterKeys = new Dictionary<OpaqueID, byte[]>();
+		private Algorithms.RsaPrivateKey _privateKey;
+
+		/// <summary>
+		/// Map of source ID to AES key. These are user and share keys, used to encrypt/decrypt item keys.
+		/// </summary>
+		private readonly IDictionary<OpaqueID, byte[]> _aesKeys = new Dictionary<OpaqueID, byte[]>();
+
+		/// <summary>
+		/// Map of source ID to RSA public key. These are used to send AES keys to other users.
+		/// </summary>
+		private readonly IDictionary<OpaqueID, Algorithms.RsaPublicKey> _publicKeys = new Dictionary<OpaqueID, Algorithms.RsaPublicKey>();
+
+		/// <summary>
+		/// Gets the AES key of the current account.
+		/// </summary>
+		internal byte[] AesKey
+		{
+			get
+			{
+				byte[] masterKey;
+				if (_aesKeys.TryGetValue(AccountID, out masterKey))
+					return masterKey;
+
+				throw new InvalidOperationException("The account's master key has not been loaded yet.");
+			}
+		}
+
+		/// <summary>
+		/// Gets the public key of the referenced account, requesting it from Mega if necessary.
+		/// </summary>
+		/// <param name="accountID">The account whose public key to get.</param>
+		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
+		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
+		internal async Task<Algorithms.RsaPublicKey> GetAccountPublicKeyInternalAsync(OpaqueID accountID, IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			PatternHelper.LogMethodCall("GetAccountPublicKeyInternalAsync", feedbackChannel, cancellationToken);
+			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
+
+			Algorithms.RsaPublicKey key;
+			if (_publicKeys.TryGetValue(accountID, out key))
+				return key;
+
+			GetAccountPublicKeyResult contactKey;
+
+			using (var keyLoadFeedback = feedbackChannel.BeginSubOperation("Requesting public key"))
+				contactKey = await ExecuteCommandInternalAsync<GetAccountPublicKeyResult>(keyLoadFeedback, cancellationToken, new GetAccountPublicKeyCommand
+				{
+					AccountID = accountID
+				});
+
+			key = Algorithms.MpiArrayBytesToRsaPublicKey(contactKey.PublicKeyMpi);
+
+			_publicKeys[accountID] = key;
+
+			return key;
+		}
+		#endregion
+
+		#region Account list management
+		/// <summary>
+		/// Map of email to account ID for all known accounts, including the current one.
+		/// </summary>
+		private readonly IDictionary<string, OpaqueID> _accountIDs = new Dictionary<string, OpaqueID>();
+
+		/// <summary>
+		/// Gets the ID of an account, referenced by email. The account must be in your contact list.
+		/// </summary>
+		/// <param name="email">Email of the target account.</param>
+		/// <param name="feedbackChannel">Allows you to receive feedback about the operation while it is running.</param>
+		/// <param name="cancellationToken">Allows you to cancel the operation.</param>
+		internal async Task<OpaqueID> GetAccountIDInternalAsync(string email, IFeedbackChannel feedbackChannel = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			PatternHelper.LogMethodCall("GetAccountIDInternalAsync", feedbackChannel, cancellationToken);
+			PatternHelper.EnsureFeedbackChannel(ref feedbackChannel);
+
+			await EnsureFilesystemAndContactlistAvailableInternalAsync(feedbackChannel, cancellationToken);
+
+			OpaqueID id;
+			if (_accountIDs.TryGetValue(email, out id))
+				return id;
+
+			throw new ArgumentException("The referenced account is not in the contact list.", "email");
+		}
+		#endregion
 
 		/// <summary>
 		/// Unique ID of this Mega client instance. This is used to determine where some change originated from.
@@ -173,7 +257,7 @@
 		/// Attempts to find and decrypt an item key that is encrypted with an available master key.
 		/// If none of the item keys use a master key we can access, returns null.
 		/// </summary>
-		/// <param name="itemKeys">Set of candidate item keys, encrypted with the master key of an account or share.</param>
+		/// <param name="itemKeys">Set of candidate item keys, encrypted with a master (AES or RSA) key of an account or share.</param>
 		internal byte[] TryDecryptItemKey(IReadOnlyCollection<EncryptedItemKey> itemKeys)
 		{
 			Argument.ValidateIsNotNull(itemKeys, "itemKeys");
@@ -184,22 +268,24 @@
 				if (candidateKey.EncryptedKey.Bytes.Length == 16 || candidateKey.EncryptedKey.Bytes.Length == 32)
 				{
 					// AES.
-					if (!_masterKeys.ContainsKey(candidateKey.SourceID))
+					byte[] aesKey;
+					if (!_aesKeys.TryGetValue(candidateKey.SourceID, out aesKey))
 						continue;
 
-					var masterKey = _masterKeys[candidateKey.SourceID];
-
-					return Algorithms.AesDecryptKey(candidateKey.EncryptedKey, masterKey);
+					return Algorithms.AesDecryptKey(candidateKey.EncryptedKey, aesKey);
 				}
-				else
+				else if (candidateKey.EncryptedKey.Bytes.Length == 256)
 				{
 					// RSA.
 					if (candidateKey.SourceID != AccountID)
-						continue;
-
-					// TODO: Support more than just this account's key.
+						continue; // TODO: Is this a real scenario to handle?
 
 					return Algorithms.RsaDecrypt(candidateKey.EncryptedKey, _privateKey);
+				}
+				else
+				{
+					// Unknown type of key.
+					continue;
 				}
 			}
 
@@ -301,9 +387,9 @@
 				// Now do the cryptography we need to get the session ID and load the profile.
 				connecting.Status = "Loading user profile";
 
-				_masterKey = Algorithms.AesDecryptKey(sessionInfo.MasterKey, _passwordKey);
+				var aesKey = Algorithms.AesDecryptKey(sessionInfo.AesKey, _passwordKey);
 
-				var privateKeyComponents = Algorithms.AesDecryptKey(sessionInfo.PrivateKeyComponents, _masterKey);
+				var privateKeyComponents = Algorithms.AesDecryptKey(sessionInfo.PrivateKeyComponents, aesKey);
 				_privateKey = Algorithms.MpiArrayBytesToRsaPrivateKey(privateKeyComponents);
 
 				var sessionIDEncrypted = Algorithms.MpiToBytes(sessionInfo.SessionIDData);
@@ -316,11 +402,12 @@
 				var profile = (await channel.CreateAndExecuteTransactionAsync(cancellationToken, new GetUserProfileCommand()))
 					.Single().ToObject<GetUserProfileResult>();
 
-				_publicKey = Algorithms.MpiArrayBytesToRsaPublicKey(profile.PublicKeyComponents);
 				AccountID = profile.UserID;
+				_aesKeys.Clear();
+				_publicKeys.Clear();
 
-				_masterKeys.Clear();
-				_masterKeys[AccountID] = _masterKey;
+				_publicKeys[AccountID] = Algorithms.MpiArrayBytesToRsaPublicKey(profile.PublicKeyComponents);
+				_aesKeys[AccountID] = aesKey;
 			}
 
 			channel.IncomingNotification += OnIncomingNotification;
@@ -395,7 +482,7 @@
 		private FilesystemSnapshot _currentFilesystemSnapshot;
 		private ImmutableHashSet<Contact> _currentContactListSnapshot;
 
-		internal async Task EnsureFilesystemAndContactlistAvailableAsync(IFeedbackChannel feedbackChannel, CancellationToken cancellationToken)
+		internal async Task EnsureFilesystemAndContactlistAvailableInternalAsync(IFeedbackChannel feedbackChannel, CancellationToken cancellationToken)
 		{
 			if (_currentFilesystemSnapshot != null && _currentContactListSnapshot != null)
 				return;
@@ -412,6 +499,35 @@
 				// This enables the channel to start change tracking.
 				if (_channel.IncomingSequenceReference == null)
 					_channel.IncomingSequenceReference = filesystem.IncomingSequenceReference;
+
+				loadingFilesystem.Status = "Loading share keys";
+
+				foreach (var item in filesystem.Items
+					.Where(i => i.ShareKey.HasValue))
+				{
+					// Share keys are either RSA-encrypted or AES-encrypted.
+
+					if (item.ShareKey.Value.Bytes.Length == 258)
+					{
+						// RSA.
+						var shareKey = Algorithms.MpiToBytes(item.ShareKey.Value);
+						var shareAesKey = Algorithms.RsaDecrypt(shareKey, _privateKey);
+						_aesKeys[item.ID] = shareAesKey.Take(16).ToArray();
+					}
+					else if (item.ShareKey.Value.Bytes.Length == 16)
+					{
+						// AES
+						_aesKeys[item.ID] = Algorithms.AesDecryptKey(item.ShareKey.Value, AesKey);
+					}
+					else
+					{
+						// ???
+						loadingFilesystem.WriteWarning("Unable to determine share key type. ID_{0}, length {1}", item.ID, item.ShareKey.Value.Bytes.Length);
+						continue;
+					}
+
+					loadingFilesystem.WriteVerbose("Got share key for {0}.", item.ID);
+				}
 
 				loadingFilesystem.Status = "Decrypting filesystem";
 

@@ -5,6 +5,6 @@
 	public sealed class GetAccountPublicKeyResult
 	{
 		[JsonProperty("pubk")]
-		public Base64Data PublicKey { get; set; }
+		public Base64Data PublicKeyMpi { get; set; }
 	}
 }

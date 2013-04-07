@@ -1,5 +1,7 @@
 ﻿namespace Mega.Tests.Client
 {
+	using System.Diagnostics;
+	using System.IO;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Mega.Client;
@@ -41,6 +43,24 @@
 					var file = TestData.SmallFile.Find(filesystem);
 
 					Assert.IsNotNull(file);
+
+					var target = Path.GetTempFileName();
+
+					// Verify contents.
+					try
+					{
+						Debug.WriteLine("Temporary local file: " + target);
+
+						await file.DownloadContentsAsync(target, feedback);
+
+						using (var expectedContents = TestData.SmallFile.Open())
+						using (var contents = File.OpenRead(target))
+							TestHelper.AssertStreamsAreEqual(expectedContents, contents);
+					}
+					finally
+					{
+						File.Delete(target);
+					}
 				}
 			}
 		}

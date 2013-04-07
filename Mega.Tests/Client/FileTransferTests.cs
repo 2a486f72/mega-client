@@ -40,7 +40,7 @@
 
 					using (var expectedContents = testFile.Open())
 					using (var contents = File.OpenRead(target))
-						AssertStreamsAreEqual(expectedContents, contents);
+						TestHelper.AssertStreamsAreEqual(expectedContents, contents);
 				}
 			}
 			finally
@@ -128,7 +128,7 @@
 
 				using (var contents = File.OpenRead(target))
 				using (var expectedContents = new MemoryStream(data))
-					AssertStreamsAreEqual(expectedContents, contents);
+					TestHelper.AssertStreamsAreEqual(expectedContents, contents);
 			}
 			finally
 			{
@@ -176,36 +176,6 @@
 			}
 		}
 
-		private static void AssertStreamsAreEqual(Stream a, Stream b)
-		{
-			Assert.AreEqual(a.Length, b.Length);
-
-			byte[] bufferA = new byte[1024 * 8];
-			byte[] bufferB = new byte[1024 * 8];
-
-			while (a.Position != a.Length)
-			{
-				var aLen = FillBufferWithData(bufferA, a);
-				var bLen = FillBufferWithData(bufferB, b);
-
-				Assert.AreEqual(aLen, bLen);
-
-				CollectionAssert.AreEqual(bufferA, bufferB);
-			}
-		}
-
-		private static int FillBufferWithData(byte[] buffer, Stream from)
-		{
-			int length = (int)Math.Min(buffer.Length, from.Length - from.Position);
-
-			int bytesRead = 0;
-
-			while (bytesRead < length)
-				bytesRead += from.Read(buffer, bytesRead, length - bytesRead);
-
-			return length;
-		}
-
 		[TestMethod]
 		[ExpectedException(typeof(OperationCanceledException))]
 		public async Task CancelingDownload_SeemsToWork()
@@ -237,7 +207,7 @@
 			finally
 			{
 				File.Delete(target);
-			}			
+			}
 		}
 	}
 }

@@ -18,7 +18,7 @@
 		/// Encrypted with the password key.
 		/// </summary>
 		[JsonProperty("k", Required = Required.Always)]
-		public Base64Data MasterKey { get; set; }
+		public Base64Data AesKey { get; set; }
 
 		/// <summary>
 		/// Array of MPIs encrypted with the master key.
