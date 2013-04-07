@@ -12,7 +12,7 @@
 	/// </summary>
 	public sealed class ItemAttributes : Dictionary<string, string>
 	{
-		public ItemAttributes() : base(StringComparer.InvariantCultureIgnoreCase)
+		public ItemAttributes() : base(StringComparer.OrdinalIgnoreCase)
 		{
 		}
 
@@ -45,7 +45,7 @@
 				throw new ArgumentException("The length of the encrypted attributes block must be divisible by 16.", "encryptedAttributesBlock");
 
 			byte[] attributesBytes = Algorithms.DecryptNodeAttributes(encryptedAttributesBlock, attributesKey);
-			var attributesString = Encoding.UTF8.GetString(attributesBytes);
+			var attributesString = Encoding.UTF8.GetString(attributesBytes, 0, attributesBytes.Length);
 
 			// Avoid possible data loss by refusing to work with the block if the prefix is missing.
 			if (!attributesString.StartsWith(MegaPrefix))

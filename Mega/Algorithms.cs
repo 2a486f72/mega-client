@@ -4,7 +4,7 @@
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Numerics;
-	using System.Security.Cryptography;
+	using Cryptography;
 	using Useful;
 
 	/// <summary>
@@ -175,47 +175,6 @@
 
 		#region Crypto
 		/// <summary>
-		/// AES engine configured for working with key encryption/decryption.
-		/// Pass your key to CreateDecryptor(), do not use the .Key property.
-		/// </summary>
-		public static readonly AesManaged AesForKeys = new AesManaged
-		{
-			BlockSize = 128,
-			KeySize = 128,
-			Padding = PaddingMode.None,
-			Mode = CipherMode.ECB
-		};
-
-		/// <summary>
-		/// AES engine configured for working with node attribute encryption/decryption.
-		/// Pass your key to CreateDecryptor(), do not use the .Key property.
-		/// </summary>
-		public static readonly AesManaged AesForNodeAttributes = new AesManaged
-		{
-			BlockSize = 128,
-			KeySize = 128,
-			Padding = PaddingMode.Zeros, // Note: data is not automatically unpadded.
-			Mode = CipherMode.CBC
-		};
-
-		/// <summary>
-		/// AES engine configured for working with node data encryption/decryption.
-		/// Pass your key to CreateDecryptor(), do not use the .Key property.
-		/// </summary>
-		public static readonly AesManaged AesForNodeData = new AesManaged
-		{
-			BlockSize = 128,
-			KeySize = 128,
-			Padding = PaddingMode.None,
-			Mode = CipherMode.ECB
-		};
-
-		/// <summary>
-		/// Just an empty IV you can give to AES when it needs one.
-		/// </summary>
-		public static readonly byte[] EmptyAesIV = new byte[16];
-
-		/// <summary>
 		/// Hashes a string using the standard string hashing function used by Mega.
 		/// </summary>
 		public static unsafe byte[] Stringhash(string data, byte[] aesKey)
@@ -237,21 +196,21 @@
 			}
 
 			// Then run it through AES for a few times.
-			using (var encryptor = AesForKeys.CreateEncryptor(aesKey, EmptyAesIV))
+			var aes = new AesFastEngine();
+			aes.Init(true, new KeyParameter(aesKey));
+
+			// We use two buffers we switch around, to avoid memory allocations in the loop.
+			var hashIn = hash;
+			var hashOut = new byte[16];
+
+			for (int i = 0; i < 16384; i++)
 			{
-				// We use two buffers we switch around, to avoid memory allocations in the loop.
-				var hashIn = hash;
-				var hashOut = new byte[16];
+				aes.ProcessBlock(hashIn, 0, hashOut, 0);
 
-				for (int i = 0; i < 16384; i++)
-				{
-					encryptor.TransformBlock(hashIn, 0, 16, hashOut, 0);
-
-					Swap(ref hashIn, ref hashOut);
-				}
-
-				hash = hashIn;
+				Swap(ref hashIn, ref hashOut);
 			}
+
+			hash = hashIn;
 
 			// And pick bytes 0-3 and 8-11 out of the whole thing, giving us a final hash 8 bytes long.
 			byte[] finalHash = new byte[8];
@@ -295,6 +254,8 @@
 
 			var subroundKey = new byte[16];
 
+			var aes = new AesFastEngine();
+
 			for (int round = 0; round < 65536; round++)
 			{
 				// Defect?! We count dwords but we add 4 on every iteration...
@@ -309,8 +270,8 @@
 							Array.Copy(keydata, keyDwordIndex * 4 + keydataDwordIndex * 4, subroundKey, keyDwordIndex * 4, 4);
 
 					// AesManaged seems to cache the key, so we specify it explicitly.
-					using (var encryptor = AesForKeys.CreateEncryptor(subroundKey, EmptyAesIV))
-						encryptor.TransformBlock(key, 0, 16, key2, 0);
+					aes.Init(true, new KeyParameter(subroundKey));
+					aes.ProcessBlock(key, 0, key2, 0);
 
 					Swap(ref key, ref key2);
 				}
@@ -334,11 +295,11 @@
 
 			var result = new byte[encryptedKey.Length];
 
-			using (var decryptor = AesForKeys.CreateDecryptor(aesKey, EmptyAesIV))
-			{
-				for (int i = 0; i < encryptedKey.Length; i += 16)
-					decryptor.TransformBlock(encryptedKey, i, 16, result, i);
-			}
+			var aes = new AesFastEngine();
+			aes.Init(false, new KeyParameter(aesKey));
+
+			for (int i = 0; i < encryptedKey.Length; i += 16)
+				aes.ProcessBlock(encryptedKey, i, result, i);
 
 			return result;
 		}
@@ -358,11 +319,11 @@
 
 			var result = new byte[keyToEncrypt.Length];
 
-			using (var decryptor = AesForKeys.CreateEncryptor(aesKey, EmptyAesIV))
-			{
-				for (int i = 0; i < keyToEncrypt.Length; i += 16)
-					decryptor.TransformBlock(keyToEncrypt, i, 16, result, i);
-			}
+			var aes = new AesFastEngine();
+			aes.Init(false, new KeyParameter(aesKey));
+
+			for (int i = 0; i < keyToEncrypt.Length; i += 16)
+				aes.ProcessBlock(keyToEncrypt, i, result, i);
 
 			return result;
 		}
@@ -436,10 +397,10 @@
 			if (encryptedData.Length % 16 != 0)
 				throw new ArgumentException("Encrypted data length was not divisible by 16 - this is abnormal. Are you sure you used the right input data?", "encryptedData");
 
-			byte[] result;
+			var aes = new AesFastEngine();
+			aes.Init(false, new KeyParameter(aesKey));
 
-			using (var decryptor = AesForNodeAttributes.CreateDecryptor(aesKey, EmptyAesIV))
-				result = decryptor.TransformFinalBlock(encryptedData, 0, encryptedData.Length);
+			var result = aes.ProcessBuffer(encryptedData);
 
 			// Calculate padding.
 			int paddingSize = 0;
@@ -468,8 +429,10 @@
 
 			Argument.ValidateLength(aesKey, "aesKey", 16);
 
-			using (var encryptor = AesForNodeAttributes.CreateEncryptor(aesKey, EmptyAesIV))
-				return encryptor.TransformFinalBlock(attributesBytes, 0, attributesBytes.Length);
+			var aes = new AesFastEngine();
+			aes.Init(true, new KeyParameter(aesKey));
+
+			return aes.ProcessBufferAddPadding(attributesBytes);
 		}
 
 		public static byte[] CalculateMetaMac(byte[][] chunkMacs, byte[] fileDataKey)
@@ -481,13 +444,15 @@
 
 			byte[] buffer = new byte[16];
 			byte[] buffer2 = new byte[16];
-			var encryptor = AesForNodeData.CreateEncryptor(fileDataKey, EmptyAesIV);
+
+			var aes = new AesFastEngine();
+			aes.Init(true, new KeyParameter(fileDataKey));
 
 			for (int i = 0; i < chunkMacs.Length; i++)
 			{
 				InPlaceArrayXor(buffer, chunkMacs[i]);
 
-				encryptor.TransformBlock(buffer, 0, 16, buffer2, 0);
+				aes.ProcessBlock(buffer, 0, buffer2, 0);
 				Swap(ref buffer, ref buffer2);
 			}
 
@@ -517,7 +482,8 @@
 			Argument.ValidateLength(nonce, "nonce", 8);
 			Argument.ValidateRange(offset, "offset", min: 0);
 
-			var encryptor = AesForNodeData.CreateEncryptor(aesKey, EmptyAesIV);
+			var aes = new AesFastEngine();
+			aes.Init(true, new KeyParameter(aesKey));
 
 			int blockCount = data.Length / 16;
 			if (data.Length % 16 != 0)
@@ -549,7 +515,7 @@
 
 				for (long blockId = 0; blockId < blockCount; blockId++)
 				{
-					encryptor.TransformBlock(ctrClear, 0, ctrClear.Length, ctrEncrypted, 0);
+					aes.ProcessBlock(ctrClear, 0, ctrEncrypted, 0);
 
 					// XOR buffer with encrypted CTR. Stop when end of buffer is reached.
 					if (blockId != blockCount - 1)
@@ -577,7 +543,7 @@
 						}
 					}
 
-					encryptor.TransformBlock(macBuffer, 0, macBuffer.Length, macBufferTemp, 0);
+					aes.ProcessBlock(macBuffer, 0, macBufferTemp, 0);
 					Array.Copy(macBufferTemp, macBuffer, 16);
 
 					// Increase the two accumulators. Remember... big endian treatement!
@@ -613,7 +579,8 @@
 			Argument.ValidateLength(nonce, "nonce", 8);
 			Argument.ValidateRange(offset, "offset", min: 0);
 
-			var encryptor = AesForNodeData.CreateEncryptor(aesKey, EmptyAesIV);
+			var aes = new AesFastEngine();
+			aes.Init(true, new KeyParameter(aesKey));
 
 			int blockCount = data.Length / 16;
 			if (data.Length % 16 != 0)
@@ -645,7 +612,7 @@
 
 				for (long blockId = 0; blockId < blockCount; blockId++)
 				{
-					encryptor.TransformBlock(ctrClear, 0, ctrClear.Length, ctrEncrypted, 0);
+					aes.ProcessBlock(ctrClear, 0, ctrEncrypted, 0);
 
 					// XOR buffer with encrypted CTR. Stop when end of buffer is reached.
 					if (blockId != blockCount - 1)
@@ -673,7 +640,7 @@
 						}
 					}
 
-					encryptor.TransformBlock(macBuffer, 0, macBuffer.Length, macBufferTemp, 0);
+					aes.ProcessBlock(macBuffer, 0, macBufferTemp, 0);
 					Array.Copy(macBufferTemp, macBuffer, 16);
 
 					// Increase the two accumulators. Remember... big endian treatement!
@@ -962,14 +929,28 @@
 		#endregion
 
 		#region Random numbers
-		private static readonly RandomNumberGenerator _random = new RNGCryptoServiceProvider();
+		// Do not like using Random class but .NET Porably Library does not give us anything better.
+		private static Random _random;
+		private static readonly object _randomLock = new object();
 
 		public static byte[] GetRandomBytes(int length)
 		{
-			var bytes = new byte[length];
-			_random.GetBytes(bytes);
+			lock (_randomLock)
+			{
+				if (_random == null)
+				{
+					// Maybe adds some entropy... maybe.
+					var seedBytes = new ThreadedSeedGenerator().GenerateSeed(4, false);
+					var seed = BitConverter.ToInt32(seedBytes, 0);
 
-			return bytes;
+					_random = new Random(seed);
+				}
+
+				var bytes = new byte[length];
+				_random.NextBytes(bytes);
+
+				return bytes;
+			}
 		}
 		#endregion
 

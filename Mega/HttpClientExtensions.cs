@@ -1,8 +1,10 @@
 ﻿namespace Mega
 {
 	using System.Net.Http;
+	using System.Text;
 	using System.Threading;
 	using System.Threading.Tasks;
+	using Newtonsoft.Json;
 
 	public static class HttpClientExtensions
 	{
@@ -49,7 +51,9 @@
 		{
 			try
 			{
-				return await instance.PostAsJsonAsync(url, content, cancellationToken);
+				var json = JsonConvert.SerializeObject(content);
+
+				return await instance.PostAsync(url, new StringContent(json, Encoding.UTF8, "application/json"), cancellationToken);
 			}
 			catch (TaskCanceledException)
 			{

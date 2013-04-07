@@ -1,7 +1,6 @@
 ﻿namespace Mega
 {
 	using System;
-	using System.Security.Cryptography;
 	using Newtonsoft.Json;
 	using Useful;
 
@@ -59,14 +58,14 @@
 			return BinaryData.ToString();
 		}
 
-		private static readonly RandomNumberGenerator _random = RandomNumberGenerator.Create();
+		private static readonly Random _random = new Random();
 
 		public static OpaqueID Random(int length)
 		{
 			Argument.ValidateRange(length, "length", 0, int.MaxValue);
 
 			byte[] bytes = new byte[length];
-			_random.GetBytes(bytes);
+			_random.NextBytes(bytes);
 
 			return bytes;
 		}

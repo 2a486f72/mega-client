@@ -75,17 +75,26 @@
 
 		private static bool IsNullableType(Type type)
 		{
-			return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+			var typeInfo = type.GetTypeInfo();
+			return typeInfo.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
 		}
 
 		private static ConstructorInfo GetDeserializationConstructor(Type type)
 		{
-			return type.GetConstructor(new[] { typeof(byte[]) });
+			return type.GetTypeInfo().DeclaredConstructors
+				.FirstOrDefault(c =>
+				{
+					var parameters = c.GetParameters();
+					if (parameters.Length != 1)
+						return false;
+
+					return parameters[0].ParameterType == typeof(byte[]);
+				});
 		}
 
 		private static MethodInfo GetSerializationOperator(Type type)
 		{
-			return type.GetMethods(BindingFlags.Static | BindingFlags.Public)
+			return type.GetTypeInfo().DeclaredMethods
 				.Where(m => m.Name == "op_Implicit" || m.Name == "op_Explicit")
 				.Where(m => m.ReturnType == typeof(byte[]))
 				.FirstOrDefault(m => m.GetParameters().Length == 1 && m.GetParameters().Single().ParameterType == type);

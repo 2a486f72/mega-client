@@ -132,9 +132,7 @@
 			var sequenceIDBytes = Algorithms.GetRandomBytes(4);
 			_sequenceID = BitConverter.ToUInt32(sequenceIDBytes, 0);
 
-			var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
-			var version = string.Format("{0}.{1}.{2}", assemblyVersion.Major, assemblyVersion.MajorRevision, assemblyVersion.Minor);
-			var userAgentHeader = new ProductInfoHeaderValue("2a486f72.Mega", version);
+			var userAgentHeader = new ProductInfoHeaderValue("2a486f72.Mega", "0.0.0");
 
 			_outgoingClient.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
 			_incomingClient.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
@@ -299,7 +297,9 @@
 				try
 				{
 					var response = await _incomingClient.PostAsyncCancellationSafe(url, new StringContent(""), _receiveIncomingMessagesCancellationSource.Token);
-					var messageWrapper = await response.Content.ReadAsAsync<IncomingNotificationWrapper>();
+					var responseBody = await response.Content.ReadAsStringAsync();
+
+					var messageWrapper = JsonConvert.DeserializeObject<IncomingNotificationWrapper>(responseBody);
 
 					if (messageWrapper.Notifications != null)
 						foreach (var notification in messageWrapper.Notifications)
