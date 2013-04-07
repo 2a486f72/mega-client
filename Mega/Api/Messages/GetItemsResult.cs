@@ -7,6 +7,9 @@
 		[JsonProperty("f", Required = Required.Always)]
 		public Item[] Items { get; set; }
 
+		/// <summary>
+		/// List of all accounts that are known to the current account. Includes contacts, non-contacts and the current account.
+		/// </summary>
 		[JsonProperty("u")]
 		public Account[] KnownAccounts { get; set; }
 

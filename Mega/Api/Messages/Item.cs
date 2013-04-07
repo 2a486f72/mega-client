@@ -41,6 +41,25 @@
 		public OpaqueID? ParentID { get; set; }
 
 		/// <summary>
+		/// If this is the root of a share, this is the amount of access we have to the share.
+		/// See KnownShareAccessLevels.
+		/// </summary>
+		[JsonProperty("r")]
+		public int? ShareAccessLevel { get; set; }
+
+		/// <summary>
+		/// If this is the root of a share, this is the master key of the share, RSA-encrypted with your public key(?).
+		/// </summary>
+		[JsonProperty("sk")]
+		public Base64Data? ShareKey { get; set; }
+
+		/// <summary>
+		/// If this is the root of a share, this is the ID of the share's owner.
+		/// </summary>
+		[JsonProperty("su")]
+		public OpaqueID? ShareOwner { get; set; }
+
+		/// <summary>
 		/// Size.
 		/// </summary>
 		[JsonProperty("s")]

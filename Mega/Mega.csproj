@@ -88,6 +88,7 @@
     <Compile Include="Api\Messages\GetAccountPublicKeyResult.cs" />
     <Compile Include="Api\Messages\KnownContactStatuses.cs" />
     <Compile Include="Api\Messages\KnownAccountTypes.cs" />
+    <Compile Include="Api\Messages\KnownShareLevels.cs" />
     <Compile Include="Api\Messages\MoveItemCommand.cs" />
     <Compile Include="Api\Messages\SetContactStatusCommand.cs" />
     <Compile Include="Api\Messages\SetItemKeysCommand.cs" />
