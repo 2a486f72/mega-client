@@ -31,6 +31,11 @@
 		/// </summary>
 		public string AccountEmail { get; private set; }
 
+        /// <summary>
+        /// Gets the name of the Mega account used by this client.
+        /// </summary>
+        public string AccountName { get; private set; }
+
 		/// <summary>
 		/// Gets a snapshot of the cloud filesystem's current state. You can use this snapshot to operate on the filesystem. The
 		/// snapshot itself is not kept up to date by the client, so you should get a new snapshot after performing operations on it.
@@ -403,6 +408,7 @@
 					.Single().ToObject<GetUserProfileResult>();
 
 				AccountID = profile.UserID;
+                AccountName = profile.Name;
 				_aesKeys.Clear();
 				_publicKeys.Clear();
 
